@@ -1,0 +1,5 @@
+cassandra-driver
+
+fastapi
+uvicorn[standard]
+python-jose[cryptography]
