@@ -1,3 +1,5 @@
+import uuid
+
 from .syncer import CassandraSyncer
 
 from src.models.principal_user_model import PrincipalUserModel
@@ -24,27 +26,27 @@ if UPDATE_DB_SCHEMA:
 
 class CRUDOps:
     @staticmethod
-    def get_prinicipal_user_by_username(username: str):
+    def get_prinicipal_user_by_username(org_id: uuid.UUID, username: str):
         import uuid
-        from src.types.user_types import UserType
+        from src.types.user_types import PrincipalUserTypes
         data = {
-            "org_id"          : uuid.uuid4(),
+            "org_id"          : org_id,
             "user_id"         : uuid.uuid4(),
             "email"           : f"{username}@example.com",
             "username"        : username,
             "preferred_name"  : f"{username}",
             "org_name"        : "example.com",
             "hashed_password" : '$2b$12$cQXJ/inXvNuXyjzenYEA/..TZbhTEkIxTLwkwEywWRjifQG6T.xMK', # brcypt hash of hello
-            "user_type"       : UserType.PRINCIPAL_USER
+            "user_type"       : PrincipalUserTypes.PRINCIPAL_USER_WORKER
         }
 
         return PrincipalUserInDBSchema(**data)
     
     @staticmethod
-    def get_service_provider_by_username(username: str):
+    def get_service_provider_by_username(org_id: uuid.UUID, username: str):
         import uuid
         data = {
-            "client_id" : uuid.uuid4(),
+            "org_id" : org_id,
             "email" : f"admin@{username}.com",
             "username" : username,
             "org_name" : username,

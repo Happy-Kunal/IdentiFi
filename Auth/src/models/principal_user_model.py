@@ -33,6 +33,6 @@ class PrincipalUserAdminModel(PrincipalUserModel):
     __discriminator_value__ = PrincipalUserTypes.PRINCIPAL_USER_ADMIN
 
 
-class PrincipalUserClientModel(PrincipalUserModel):
-    __discriminator_value__ = PrincipalUserTypes.PRINCIPAL_USER_CLIENT
+class PrincipalUserWorkerModel(PrincipalUserModel):
+    __discriminator_value__ = PrincipalUserTypes.PRINCIPAL_USER_WORKER
 
