@@ -26,11 +26,11 @@ if UPDATE_DB_SCHEMA:
 
 class CRUDOps:
     @staticmethod
-    def get_prinicipal_user_by_username(org_id: uuid.UUID, username: str):
+    def get_prinicipal_user_by_username(client_id: uuid.UUID, username: str):
         import uuid
         from src.types.user_types import PrincipalUserTypes
         data = {
-            "org_id"          : org_id,
+            "client_id"          : client_id,
             "user_id"         : uuid.uuid4(),
             "email"           : f"{username}@example.com",
             "username"        : username,
@@ -43,10 +43,10 @@ class CRUDOps:
         return PrincipalUserInDBSchema(**data)
     
     @staticmethod
-    def get_service_provider_by_username(org_id: uuid.UUID, username: str):
+    def get_service_provider_by_username(client_id: uuid.UUID, username: str):
         import uuid
         data = {
-            "org_id" : org_id,
+            "client_id" : client_id,
             "email" : f"admin@{username}.com",
             "username" : username,
             "org_name" : username,

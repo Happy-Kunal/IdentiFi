@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi import Depends
 
 from src.security.security import router as security_router
-from src.security.security import get_current_user
+from src.security.utils import get_current_user
 
 from src.schemas.principal_user import PrincipalUserOutputSchema
 from src.schemas.service_provider import ServiceProviderOutputSchema

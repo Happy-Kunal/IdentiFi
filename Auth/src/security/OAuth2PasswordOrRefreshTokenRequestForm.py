@@ -150,7 +150,7 @@ class OAuth2PasswordOrRefreshTokenRequestForm:
         elif (self.grant_type == "refresh_token" and not refresh_token):
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="refresh_token is missing for request with grant_type=password"
+                detail="refresh_token is missing for request with grant_type=refresh_token"
             )
         
 

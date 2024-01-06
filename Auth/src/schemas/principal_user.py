@@ -7,7 +7,7 @@ from pydantic import EmailStr
 from src.types.user_types import PrincipalUserTypes
 
 class PrincipalUserBaseSchema(BaseModel):
-    org_id: UUID
+    client_id: UUID
     user_id: UUID
     email: EmailStr
     username: str
@@ -16,9 +16,9 @@ class PrincipalUserBaseSchema(BaseModel):
     user_type: PrincipalUserTypes
 
 
-    @field_serializer("org_id")
-    def serialize_org_id(self, org_id: UUID, _info):
-        return str(org_id)
+    @field_serializer("client_id")
+    def serialize_client_id(self, client_id: UUID, _info):
+        return str(client_id)
     
     @field_serializer("user_id")
     def serialize_user_id(self, user_id: UUID, _info):
