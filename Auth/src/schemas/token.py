@@ -17,16 +17,11 @@ class Token(BaseModel):
 
 
 class RefreshTokenData(BaseModel):
-    client_id: UUID
     sub: str
     user_type: UserType
     iss: str
     scopes: List[Scopes]
     exp: datetime
-
-    @field_serializer("client_id")
-    def serialize_client_id(self, client_id: UUID, _info):
-        return str(client_id)
 
 
 class AccessTokenData(RefreshTokenData):

@@ -5,7 +5,8 @@ from typing_extensions import Annotated
 
 
 from fastapi import APIRouter
-from fastapi import Depends, Form
+from fastapi import Cookie, Depends, Form
+from fastapi import Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 
 
@@ -20,7 +21,7 @@ from .exceptions import (
     not_enough_permission_exception
 )
 
-from .OAuth2PasswordOrRefreshTokenRequestForm import OAuth2PasswordOrRefreshTokenRequestForm
+from .request_params import OAuth2PasswordOrRefreshTokenRequestParams
 
 from .utils import (
     authenticate_user,
@@ -28,6 +29,7 @@ from .utils import (
     encode_to_jwt_token,
     is_allowed_to_grant_scopes_to_user,
     process_scopes,
+    set_tokens_in_cookie,
 )
 
 
@@ -43,7 +45,7 @@ router = APIRouter(prefix="/auth")
 
 
 
-async def access_token_using_password_grant(username: str, password: str, scopes: List[str], client_id: str):
+async def access_token_using_password_grant(username: str, password: str, scopes: List[str], client_id: str) -> Token:
     processed_scopes: ProcessedScopes = process_scopes(scopes)
     
     try:
@@ -57,8 +59,7 @@ async def access_token_using_password_grant(username: str, password: str, scopes
         raise not_enough_permission_exception(scopes=processed_scopes.scopes)
         
     refresh_token_data = RefreshTokenData(
-        client_id=client_id,
-        sub=user.username,
+        sub=f"{user.client_id}:{user.username}",
         user_type=processed_scopes.user_type,
         iss=ISSUER,
         scopes=processed_scopes.scopes,
@@ -69,8 +70,7 @@ async def access_token_using_password_grant(username: str, password: str, scopes
     
 
     access_token_data = AccessTokenData(
-        client_id=client_id,
-        sub=user.username,
+        sub=f"{user.client_id}:{user.username}",
         user_type=processed_scopes.user_type,
         iss=ISSUER,
         exp=datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
@@ -79,21 +79,23 @@ async def access_token_using_password_grant(username: str, password: str, scopes
     
     access_token = encode_to_jwt_token(data=access_token_data.model_dump())
 
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        "refresh_token": refresh_token,
-        "scope": " ".join(access_token_data.scopes)
-    }
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        refresh_token=refresh_token,
+        scope=" ".join(access_token_data.scopes)
+    )
 
 
-async def access_token_using_refresh_token_grant(refresh_token: str):
+async def access_token_using_refresh_token_grant(refresh_token: str) -> Token:
     refresh_token_data = RefreshTokenData(**decode_jwt_token(refresh_token))
+    client_id, _, username = refresh_token_data.sub.partition(":")
+
     if (refresh_token_data.user_type == UserType.PRINCIPAL_USER):
-        user = CRUDOps.get_prinicipal_user_by_username(refresh_token_data.client_id, refresh_token_data.sub)
+        user = CRUDOps.get_prinicipal_user_by_username(client_id, username)
     else:
-        user = CRUDOps.get_service_provider_by_username(refresh_token_data.client_id, refresh_token_data.sub)
+        user = CRUDOps.get_service_provider_by_username(client_id, username)
 
     if (not user):
         raise invalid_token_exception
@@ -102,7 +104,6 @@ async def access_token_using_refresh_token_grant(refresh_token: str):
 
 
     access_token_data = AccessTokenData(
-        client_id=refresh_token_data.client_id,
         sub=refresh_token_data.sub,
         user_type=refresh_token_data.user_type,
         iss=refresh_token_data.iss,
@@ -114,57 +115,81 @@ async def access_token_using_refresh_token_grant(refresh_token: str):
 
     access_token = encode_to_jwt_token(access_token_data.model_dump())
 
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "expires_in": expires_in,
-        "refresh_token": refresh_token,
-        "scope": " ".join(access_token_data.scopes)
-    }
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        expires_in=expires_in,
+        refresh_token=refresh_token,
+        scope=" ".join(access_token_data.scopes)
+    )
 
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordOrRefreshTokenRequestForm, Depends()],
+    response: Response,
+    form_data: Annotated[OAuth2PasswordOrRefreshTokenRequestParams, Depends()],
+    set_cookie: bool = True,
 ):
     if (form_data.grant_type == "password"):
-        print(form_data.scopes)
-        return await access_token_using_password_grant(
+        token = await access_token_using_password_grant(
             username=form_data.username,
             password=form_data.password,
             scopes=form_data.scopes,
             client_id=form_data.client_id
         )
+
+        if(set_cookie): set_tokens_in_cookie(response=response, token=token, cookie_path_for_refresh_token="/auth")
+        return token
     
     else:
-        return await access_token_using_refresh_token_grant(form_data.refresh_token)
+        token = await access_token_using_refresh_token_grant(form_data.refresh_token)
+
+        if(set_cookie): set_tokens_in_cookie(response=response, token=token, cookie_path_for_refresh_token="/auth")
+        return token
+    
     
 
 @router.post("/passwordflow/token")
 async def login_password_flow(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+    response: Response,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    set_cookie: bool = True,
 ):
     """
     token endpoint optimized for grant_type=password
     """
 
-    return await access_token_using_password_grant(
+    token = await access_token_using_password_grant(
         username=form_data.username,
         password=form_data.password,
         scopes=form_data.scopes,
         client_id=form_data.client_id
     )
 
+    if(set_cookie): set_tokens_in_cookie(response=response, token=token, cookie_path_for_refresh_token="/auth")
+    return token
+    
+
 
 @router.post("/refresh")
 async def login_password_flow(
     *,
+    request: Request,
+    response: Response,
     grant_type: Annotated[str, Form(pattern="refresh_token")] = "refresh_token",
-    refresh_token: Annotated[str, Form()]
+    refresh_token: Annotated[str, Form()],
+    set_cookie: bool = True,
 ):
     """
     token endpoint optimized for grant_type=refresh_token
+
+    our implementation supports setting it through both `cookie` and
+    `form` field but if both are present `form` will take precedence.
     """
 
-    return await access_token_using_refresh_token_grant(refresh_token=refresh_token)
+    token = await access_token_using_refresh_token_grant(refresh_token=refresh_token or request.cookies.get("refresh_token"))
+
+    if(set_cookie): set_tokens_in_cookie(response=response, token=token, cookie_path_for_refresh_token="/auth")
+    return token
+    
 

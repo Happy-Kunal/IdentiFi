@@ -8,13 +8,14 @@ from datetime import datetime, timezone, timedelta
 
 from pydantic import HttpUrl
 from fastapi import APIRouter
-from fastapi import Depends
+from fastapi import Depends, Cookie
 from fastapi import Request
 from fastapi import HTTPException, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2AuthorizationCodeBearer
 
 from jose import jwe
+from jose.exceptions import JWEError
 
 from src.schemas.principal_user import PrincipalUserInDBSchema
 from src.crud.crud_ops import CRUDOps
@@ -27,6 +28,7 @@ from src.security.utils import oauth2_scheme as user_jwt_access_token_getter_asy
 from .oidc_scopes import OIDCScopes
 from .request_parameters import OAuth2AuthorizationCodeRequestForm, OAuth2AuthorizationCodeRequestQuery
 from .authorization_code_data import AuthorizationCodeData
+from .authorization_code_token_request import AuthorizationCodeTokenRequestParams
 
 
 LOGIN_ENDPOINT = "http://localhost:8000/login"
@@ -67,12 +69,19 @@ def encrypt_string(data: str) -> str:
     return jwe.encrypt(data, key=JWE_SECRET_KEY, encryption=JWE_ENCRYPT_ALGORITHM, algorithm=JWE_KEY_MANAGEMENT_ALGORITHM).decode("utf-8")
 
 def decrypt_string(data: str):
-    return jwe.decrypt(data, key=JWE_SECRET_KEY)
+    try:
+        return jwe.decrypt(data, key=JWE_SECRET_KEY)
+    except JWEError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid authorization_code",
+        )
 
 async def get_logged_in_user(access_token: str) -> Union[PrincipalUserInDBSchema, None]:
     token_data = AccessTokenData(**decode_jwt_token(access_token))
+    client_id, _, username = token_data.sub.partition(":")
     if (token_data.user_type == UserType.PRINCIPAL_USER):
-        user = CRUDOps.get_prinicipal_user_by_username(token_data.client_id, token_data.sub)
+        user = CRUDOps.get_prinicipal_user_by_username(client_id, username)
     else:
         raise not_enough_permission_exception()
     
@@ -112,7 +121,7 @@ async def send_consent_form(redirect_uri: HttpUrl):
 
 async def generate_authorization_code(user: PrincipalUserInDBSchema, client_id: UUID, redirect_uri: HttpUrl, scopes: List[OIDCScopes]) -> str:
     authorization_code_data = AuthorizationCodeData(
-        sub=f"{user.client_id}:{user.user_id}",
+        sub=f"{user.client_id}:{user.username}",
         redirect_uri=redirect_uri,
         scopes=scopes,
         client_id=client_id,
@@ -132,7 +141,10 @@ async def authorize(
     try:
         access_token = await user_jwt_access_token_getter_async(request=request)
     except HTTPException:
-        return await display_login_screen(redirect_uri=request.url._url)
+        access_token = request.cookies.get("access_token")
+        print(access_token)
+        if (not access_token):
+            return await display_login_screen(redirect_uri=request.url._url)
     
 
     user = await get_logged_in_user(access_token=access_token)
@@ -151,12 +163,27 @@ async def authorize(
             status_code=status.HTTP_302_FOUND
         )
 
+
 @router.post("/authorize")
 async def authorize_by_post(
     request: Request,
     form_data: Annotated[OAuth2AuthorizationCodeRequestForm, Depends()],
 ):
-    return authorize(
+    return await authorize(
         request=request,
-        query_data=cast(OAuth2AuthorizationCodeRequestQuery, form_data)
+        query_data=cast(OAuth2AuthorizationCodeRequestQuery, form_data),
     )
+
+@router.post("/token")
+async def token_from_authorization_code(params: AuthorizationCodeTokenRequestParams):
+    # TODO: replace temporary implementation with one that fits OAuth2 Logic
+    return {
+        "code_data": decode_jwt_token(decrypt_string(params.code)),
+        "params": {
+            "grant_type": params.grant_type,
+            "code": params.code,
+            "redirect_uri": params.redirect_uri,
+            "client_id": params.client_id,
+            "client_secret": params.client_secret,
+        }
+    }

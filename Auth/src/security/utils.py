@@ -5,6 +5,7 @@ from typing_extensions import Annotated
 
 from pydantic import ValidationError
 from fastapi import Depends
+from fastapi import Response
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from jose import jwt, JWTError
 from passlib.context import CryptContext
@@ -14,7 +15,7 @@ from src.types.user_types import UserType, PrincipalUserTypes
 from src.types.scopes import Scopes
 from src.crud.crud_ops import CRUDOps
 
-from src.schemas.token import AccessTokenData
+from src.schemas.token import Token, AccessTokenData
 from src.schemas.processed_scopes import ProcessedScopes
 from src.schemas.principal_user import PrincipalUserInDBSchema
 from src.schemas.service_provider import ServiceProviderInDBSchema
@@ -26,7 +27,8 @@ from .exceptions import (
     not_enough_permission_exception
 )
 
-
+HTTPS_ONLY = False # Must be True For Production use cases
+REFRESH_TOKEN_EXPIRE_MINUTES = 24 * 60 # 24 hours
 ALGORITHM = "RS256" # RSA
 PRIVATE_KEY = "<PRIVATE_SECRET_KEY>" # openssl genpkey -algorithm RSA -out private_key.pem
 PUBLIC_KEY = "<PUBLIC_SECRET_KEY>" # openssl rsa -pubout -in private_key.pem -out public_key.pem
@@ -116,6 +118,27 @@ def process_scopes(scopes: List[Scopes]) -> ProcessedScopes:
         return ProcessedScopes(user_type=UserType.PRINCIPAL_USER, scopes=[Scopes.worker, Scopes.admin])
     else:
         raise invalid_scopes_selection_exception
+
+
+def set_tokens_in_cookie(response: Response, token: Token, cookie_path_for_refresh_token: str = "/"):
+    response.set_cookie(
+        key="access_token",
+        value=token.access_token,
+        expires=token.expires_in,
+        secure=HTTPS_ONLY,
+        httponly=True,
+        samesite="strict"
+    )
+    
+    response.set_cookie(
+        key="refresh_token",
+        value=token.refresh_token,
+        expires=REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+        path=cookie_path_for_refresh_token,
+        secure=HTTPS_ONLY,
+        httponly=True,
+        samesite="strict"
+    )
 
 
 def verify_password(plain_password: str, hashed_password: str):

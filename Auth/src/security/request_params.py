@@ -13,11 +13,12 @@ from typing_extensions import Annotated, Doc
 from typing import Union
 
 
-from fastapi import Form
+from fastapi import Cookie, Form
+from fastapi import Request
 from fastapi import status, HTTPException
 
 
-class OAuth2PasswordOrRefreshTokenRequestForm:
+class OAuth2PasswordOrRefreshTokenRequestParams:
     """
     This is a dependency class to collect the `username` and `password` as form data
     for an OAuth2 password flow. or refresh_token in case of using refresh token to
@@ -39,6 +40,7 @@ class OAuth2PasswordOrRefreshTokenRequestForm:
     def __init__(
         self,
         *,
+        request: Request,
         grant_type: Annotated[
             str,
             Form(pattern="password|refresh_token"),
@@ -127,6 +129,9 @@ class OAuth2PasswordOrRefreshTokenRequestForm:
                 """
                 `refresh_token` string. The OAuth2 spec requires the exact field name
                 `refresh_token` if grant_type=refresh_token.
+                our implementation supports setting it through both `cookie` and `form`
+                field but if both are present form will take precedence.
+
                 it will be ignored if grant_type=password.
                 """
             )
@@ -136,10 +141,10 @@ class OAuth2PasswordOrRefreshTokenRequestForm:
         self.grant_type = grant_type
         self.client_id = client_id
         self.client_secret = client_secret
-        self.username = username
-        self.password = password
+        self.username = username if grant_type == "password" else None
+        self.password = password if grant_type == "password" else None
         self.scopes = scope.split()
-        self.refresh_token = refresh_token
+        self.refresh_token = (refresh_token or request.cookies.get("refresh_token")) if grant_type == "refresh_token" else None
 
         if (self.grant_type == "password" and (username == None or password == None)):
             raise HTTPException(
@@ -152,15 +157,4 @@ class OAuth2PasswordOrRefreshTokenRequestForm:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="refresh_token is missing for request with grant_type=refresh_token"
             )
-        
-
-
-    
-    def __repr__(self):
-        return (
-            f"OAuth2PasswordRequestForm(grant_type={self.grant_type} "
-            + f"client_id={self.client_id}, client_secret={self.client_id} "
-            + f"username={self.username}, passowrd={self.password}, "
-            + f"scopes={self.scopes}, refresh_token={self.refresh_token})"
-        )
 

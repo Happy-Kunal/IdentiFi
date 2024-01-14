@@ -1,0 +1,143 @@
+from typing import Union
+from typing_extensions import Annotated, Doc
+from uuid import UUID
+
+from pydantic import BaseModel
+from pydantic import HttpUrl
+
+from fastapi import Form, Depends
+from fastapi import Request
+from fastapi import HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+
+
+
+http_basic_auth_scheme = HTTPBasic()
+
+
+class AuthorizationCodeTokenRequestParamsSchema(BaseModel):
+    grant_type: str
+    code: str
+    redirect_uri: HttpUrl
+    client_id: UUID
+    client_secret: str
+
+
+class __AuthorizationCodeTokenRequest:
+   async def __call__(
+        self,
+        *,
+        request: Request,
+        grant_type: Annotated[
+            str,
+            Form(pattern="authorization_code"),
+            Doc(
+                """
+                REQUIRED.  Value MUST be set to "authorization_code".
+                """
+            )
+        ] = "authorization_code",
+        code: Annotated[
+            str,
+            Form(),
+            Doc(
+                """
+                REQUIRED.  The authorization code received from the
+                authorization server.
+                """
+            )
+        ],
+        redirect_uri: Annotated[
+            Union[HttpUrl, None],
+            Form(),
+            Doc(
+                """
+                REQUIRED, if the "redirect_uri" parameter was included in the
+                authorization request as described in
+                [Section 4.1.1](https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1),
+                and their values MUST be identical
+                """
+            )
+        ] = None,
+        client_id: Annotated[
+            Union[UUID, None],
+            Form(),
+            Doc(
+                """
+                REQUIRED, if the client is not authenticating with the
+                authorization server as described in
+                [Section 3.2.1](https://datatracker.ietf.org/doc/html/rfc6749#section-3.2.1).
+                
+                if passed in HTTP request entity-body (application/x-www-form-urlencoded)
+                and also in Authorization header (HTTP Basic Auth) value in body takes
+                precedence.
+                """
+            )
+        ] = None,
+        client_secret: Annotated[
+            Union[str, None],
+            Form(),
+            Doc(
+                """
+                REQUIRED, if the client is not authenticating with the
+                authorization server as described in
+                [Section 3.2.1](https://datatracker.ietf.org/doc/html/rfc6749#section-3.2.1).
+
+                and if using client_secret_post as per
+                https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
+                to authenticate the client.
+
+
+                if passed in HTTP request entity-body (application/x-www-form-urlencoded)
+                and also in Authorization header (HTTP Basic Auth) value in body takes
+                precedence.
+                """
+            )
+        ] = None,
+    ) -> AuthorizationCodeTokenRequestParamsSchema:
+        self.grant_type = grant_type
+        self.code = code
+        self.redirect_uri = redirect_uri
+        
+        if (not (client_id and client_secret)):
+            try:
+                http_basic_auth_params: HTTPBasicCredentials = await http_basic_auth_scheme(request=request)
+                client_id = client_id or UUID(http_basic_auth_params.username)
+                client_secret = client_secret or http_basic_auth_params.password
+            except HTTPException:
+                raise # This will re-raise the last thrown exception, with original stack trace intact
+            except Exception:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="client_id passed in Authorization header is not of type UUID",
+                    headers={"WWW-Authenticate": "Basic"}
+                )
+        
+        return AuthorizationCodeTokenRequestParamsSchema(
+            grant_type=grant_type,
+            code=code,
+            redirect_uri=redirect_uri,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+
+AuthorizationCodeTokenRequest = __AuthorizationCodeTokenRequest()
+
+AuthorizationCodeTokenRequestParams = Annotated[AuthorizationCodeTokenRequestParamsSchema, Depends(AuthorizationCodeTokenRequest)]
+
+# example
+if __name__ == "__main__":
+    from fastapi import FastAPI
+
+    app = FastAPI()
+
+
+    @app.post("/token")
+    async def fake_token(params: AuthorizationCodeTokenRequestParams):
+        return {
+            "grant_type": params.grant_type,
+            "code": params.code,
+            "redirect_uri": params.redirect_uri,
+            "client_id": params.client_id,
+            "client_secret": params.client_secret,
+        }
