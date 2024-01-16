@@ -8,7 +8,7 @@ from src.models.service_provider_model import ServiceProviderModel
 
 from src.schemas.principal_user import PrincipalUserInDBSchema
 from src.schemas.service_provider import ServiceProviderInDBSchema
-from src.oidc.oidc_scopes import OIDCScopes
+from src.types.scopes import OIDCScopes
 
 UPDATE_DB_SCHEMA = False
 
@@ -39,7 +39,7 @@ class CRUDOps:
             "preferred_name"  : f"{username}",
             "org_name"        : "example.com",
             "hashed_password" : '$2b$12$cQXJ/inXvNuXyjzenYEA/..TZbhTEkIxTLwkwEywWRjifQG6T.xMK', # brcypt hash of hello
-            "user_type"       : PrincipalUserTypes.PRINCIPAL_USER_WORKER
+            "user_type"       : PrincipalUserTypes.PRINCIPAL_USER_ADMIN
         }
 
         return PrincipalUserInDBSchema(**data)
@@ -66,6 +66,21 @@ class CRUDOps:
             username="MrFooBar",
             org_name="Foo Bar & Co.",
             client_secret='$2b$12$cQXJ/inXvNuXyjzenYEA/..TZbhTEkIxTLwkwEywWRjifQG6T.xMK', # brcypt hash of hello
+            hashed_password='$2b$12$cQXJ/inXvNuXyjzenYEA/..TZbhTEkIxTLwkwEywWRjifQG6T.xMK', # brcypt hash of hello
+        )
+    
+    @staticmethod
+    def get_principal_user_by_user_id(client_id: uuid.UUID, user_id: uuid.UUID) -> PrincipalUserInDBSchema:
+        from src.types.user_types import PrincipalUserTypes
+
+        return PrincipalUserInDBSchema(
+            client_id=client_id,
+            user_id=user_id,
+            email="foo.bar@example.com",
+            username="foo.bar",
+            preferred_name="Mr. Foo Bar",
+            org_name="Example Inc",
+            user_type=PrincipalUserTypes.PRINCIPAL_USER_ADMIN,
             hashed_password='$2b$12$cQXJ/inXvNuXyjzenYEA/..TZbhTEkIxTLwkwEywWRjifQG6T.xMK', # brcypt hash of hello
         )
     

@@ -12,7 +12,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from src.types.user_types import UserType
 from src.crud.crud_ops import CRUDOps
-from src.schemas.token import Token, AccessTokenData, RefreshTokenData
+from src.schemas.token import TokenResponse, AccessTokenData, RefreshTokenData
 from src.schemas.processed_scopes import ProcessedScopes
 
 from .exceptions import (
@@ -37,7 +37,7 @@ from .utils import (
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_MINUTES = 24 * 60 # 24 hours
-ISSUER = "localhost"
+ISSUER = "http://127.0.0.1:8000/"
 
 
 router = APIRouter(prefix="/auth")
@@ -45,7 +45,7 @@ router = APIRouter(prefix="/auth")
 
 
 
-async def access_token_using_password_grant(username: str, password: str, scopes: List[str], client_id: str) -> Token:
+async def access_token_using_password_grant(username: str, password: str, scopes: List[str], client_id: str) -> TokenResponse:
     processed_scopes: ProcessedScopes = process_scopes(scopes)
     
     try:
@@ -79,7 +79,7 @@ async def access_token_using_password_grant(username: str, password: str, scopes
     
     access_token = encode_to_jwt_token(data=access_token_data.model_dump())
 
-    return Token(
+    return TokenResponse(
         access_token=access_token,
         token_type="bearer",
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
@@ -88,7 +88,7 @@ async def access_token_using_password_grant(username: str, password: str, scopes
     )
 
 
-async def access_token_using_refresh_token_grant(refresh_token: str) -> Token:
+async def access_token_using_refresh_token_grant(refresh_token: str) -> TokenResponse:
     refresh_token_data = RefreshTokenData(**decode_jwt_token(refresh_token))
     client_id, _, username = refresh_token_data.sub.partition(":")
 
@@ -115,7 +115,7 @@ async def access_token_using_refresh_token_grant(refresh_token: str) -> Token:
 
     access_token = encode_to_jwt_token(access_token_data.model_dump())
 
-    return Token(
+    return TokenResponse(
         access_token=access_token,
         token_type="bearer",
         expires_in=expires_in,
@@ -124,7 +124,7 @@ async def access_token_using_refresh_token_grant(refresh_token: str) -> Token:
     )
 
 
-@router.post("/token", response_model=Token)
+@router.post("/token", response_model=TokenResponse)
 async def login_for_access_token(
     response: Response,
     form_data: Annotated[OAuth2PasswordOrRefreshTokenRequestParams, Depends()],

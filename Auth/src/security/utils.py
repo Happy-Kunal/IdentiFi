@@ -15,7 +15,7 @@ from src.types.user_types import UserType, PrincipalUserTypes
 from src.types.scopes import Scopes
 from src.crud.crud_ops import CRUDOps
 
-from src.schemas.token import Token, AccessTokenData
+from src.schemas.token import TokenResponse, AccessTokenData
 from src.schemas.processed_scopes import ProcessedScopes
 from src.schemas.principal_user import PrincipalUserInDBSchema
 from src.schemas.service_provider import ServiceProviderInDBSchema
@@ -29,10 +29,9 @@ from .exceptions import (
 
 HTTPS_ONLY = False # Must be True For Production use cases
 REFRESH_TOKEN_EXPIRE_MINUTES = 24 * 60 # 24 hours
-ALGORITHM = "RS256" # RSA
-PRIVATE_KEY = "<PRIVATE_SECRET_KEY>" # openssl genpkey -algorithm RSA -out private_key.pem
-PUBLIC_KEY = "<PUBLIC_SECRET_KEY>" # openssl rsa -pubout -in private_key.pem -out public_key.pem
-
+SAME_SITE_JWT_SIGNING_ALGORITHM = "RS256" # RSA
+SAME_SITE_JWT_SIGNING_PRIVATE_KEY = "<PRIVATE_SECRET_KEY>" # openssl genpkey -algorithm RSA -out private_key.pem
+SAME_SITE_JWT_SIGNING_PUBLIC_KEY = "<PUBLIC_SECRET_KEY>" # openssl rsa -pubout -in private_key.pem -out public_key.pem
 
 
 scopes = {
@@ -63,19 +62,19 @@ def authenticate_user(client_id: UUID, username: str, password: str, user_type: 
         raise credentials_exception
     
 
-def decode_jwt_token(token: str) -> dict:
+def decode_jwt_token(token: str, algorithms: List[str] = [SAME_SITE_JWT_SIGNING_ALGORITHM], public_key: str = SAME_SITE_JWT_SIGNING_PUBLIC_KEY) -> Dict[str, Any]:
     try:
-        payload = jwt.decode(token, PUBLIC_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        payload = jwt.decode(token, public_key, algorithms=algorithms)
+        sub: str = payload.get("sub")
+        if sub is None:
             raise invalid_token_exception
         return payload
     except (JWTError, ValidationError):
         raise invalid_token_exception
 
 
-def encode_to_jwt_token(data: Dict[str, Any]) -> str:
-    encoded_jwt = jwt.encode(data.copy(), PRIVATE_KEY, algorithm=ALGORITHM)
+def encode_to_jwt_token(data: Dict[str, Any], algorithm: str = SAME_SITE_JWT_SIGNING_ALGORITHM, private_key: str = SAME_SITE_JWT_SIGNING_PRIVATE_KEY) -> str:
+    encoded_jwt = jwt.encode(data.copy(), private_key, algorithm=algorithm)
     return encoded_jwt
 
 
@@ -97,7 +96,6 @@ def is_allowed_to_grant_scopes_to_user(scopes: List[Scopes], user: Union[Princip
 
 
 def process_scopes(scopes: List[Scopes]) -> ProcessedScopes:
-    print(scopes)
     if (len(scopes) >= len(Scopes.__members__)):
         raise invalid_scopes_selection_exception
     
@@ -120,7 +118,7 @@ def process_scopes(scopes: List[Scopes]) -> ProcessedScopes:
         raise invalid_scopes_selection_exception
 
 
-def set_tokens_in_cookie(response: Response, token: Token, cookie_path_for_refresh_token: str = "/"):
+def set_tokens_in_cookie(response: Response, token: TokenResponse, cookie_path_for_refresh_token: str = "/"):
     response.set_cookie(
         key="access_token",
         value=token.access_token,

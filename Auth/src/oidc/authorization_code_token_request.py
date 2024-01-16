@@ -24,6 +24,15 @@ class AuthorizationCodeTokenRequestParamsSchema(BaseModel):
 
 
 class __AuthorizationCodeTokenRequest:
+   """
+   It supports extracting `Token Request` Params from `Request` for
+   authorization_code flow.
+
+   It supports client_secret_basic, client_secret_post as per (OIDC specs)
+   [https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication]
+   for extracting Client Credentials for Client Authentication from `Request`.
+   """
+   
    async def __call__(
         self,
         *,

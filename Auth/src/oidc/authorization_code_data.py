@@ -6,7 +6,7 @@ from pydantic import HttpUrl
 from pydantic import BaseModel
 from pydantic import field_serializer
 
-from .oidc_scopes import OIDCScopes
+from src.types.scopes import OIDCScopes
 
 class AuthorizationCodeData(BaseModel):
     sub: str
