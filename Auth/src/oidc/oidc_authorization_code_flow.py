@@ -17,6 +17,7 @@ from fastapi.security import OAuth2AuthorizationCodeBearer
 from jose import jwe
 from jose.exceptions import JWEError
 
+from src.config import cfg
 from src.crud.crud_ops import CRUDOps
 from src.schemas.principal_user import PrincipalUserInDBSchema
 from src.schemas.token import (
@@ -40,18 +41,18 @@ from .authorization_code_data import AuthorizationCodeData
 from .authorization_code_token_request import AuthorizationCodeTokenRequestParams
 
 
-LOGIN_ENDPOINT = "http://127.0.0.1:8000/login"
-JWE_KEY_MANAGEMENT_ALGORITHM = "dir"
-JWE_ENCRYPT_ALGORITHM = "A256GCM"
-JWE_SECRET_KEY = "<JWE_SECRET_KEY><JWE_SECRET_KEY>" #256 bits (32 chars)
-AUTHORIZATION_CODE_EXP_TIME_IN_MINUTES = 2
-OIDC_JWT_SIGNING_ALGORITHM = "RS256" # RSA
-OIDC_JWT_SIGNING_PRIVATE_KEY = "<PRIVATE_SECRET_KEY>" # openssl genpkey -algorithm RSA -out private_key.pem
-OIDC_JWT_SIGNING_PUBLIC_KEY = "<PUBLIC_SECRET_KEY>" # openssl rsa -pubout -in private_key.pem -out public_key.pem
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_TOKEN_EXPIRE_MINUTES = 24 * 60 # 24 hours
-ID_TOKEN_EXPIRE_MINUTES = 10
-ISSUER = "http://127.0.0.1:8000/"
+LOGIN_ENDPOINT = cfg.login_endpoint
+JWE_KEY_MANAGEMENT_ALGORITHM = cfg.oidc.jwe.algorithms.key_management
+JWE_ENCRYPT_ALGORITHM = cfg.oidc.jwe.algorithms.encryption
+JWE_SECRET_KEY = cfg.oidc.jwe.secret_key
+AUTHORIZATION_CODE_EXPIRE_TIME = cfg.oidc.exp_time.authcode
+OIDC_JWT_SIGNING_ALGORITHM = cfg.oidc.jwt.signing_algorithm
+OIDC_JWT_SIGNING_PRIVATE_KEY = cfg.oidc.jwt.keys.private_key
+OIDC_JWT_SIGNING_PUBLIC_KEY = cfg.oidc.jwt.keys.public_key
+ACCESS_TOKEN_EXPIRE_TIME = cfg.oidc.exp_time.access_token
+REFRESH_TOKEN_EXPIRE_TIME = cfg.oidc.exp_time.refresh_token
+ID_TOKEN_EXPIRE_TIME = cfg.oidc.exp_time.id_token
+ISSUER = cfg.issuer
 
 
 
@@ -176,7 +177,7 @@ async def generate_authorization_code(
         redirect_uri=redirect_uri,
         scopes=scopes,
         client_id=client_id,
-        exp=datetime.now(timezone.utc) + timedelta(minutes=AUTHORIZATION_CODE_EXP_TIME_IN_MINUTES)
+        exp=datetime.now(timezone.utc) + timedelta(seconds=AUTHORIZATION_CODE_EXPIRE_TIME)
     )
 
     authorization_code = encrypt_string(
@@ -201,18 +202,18 @@ async def create_tokens_from_authcode_data(authcode_data: AuthorizationCodeData)
     
     access_token = OIDCAccessTokenData(
         **common,
-        exp=datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        exp=datetime.now(timezone.utc) + timedelta(seconds=ACCESS_TOKEN_EXPIRE_TIME),
     )
 
     refresh_token = OIDCRefreshTokenData(
         **common,
-        exp=datetime.now(timezone.utc) + timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES),
+        exp=datetime.now(timezone.utc) + timedelta(seconds=REFRESH_TOKEN_EXPIRE_TIME),
     )
 
     id_token = OIDCIDTokenData(
         **common,
         iat=datetime.now(timezone.utc),
-        exp=datetime.now(timezone.utc) + timedelta(minutes=ID_TOKEN_EXPIRE_MINUTES)
+        exp=datetime.now(timezone.utc) + timedelta(seconds=ID_TOKEN_EXPIRE_TIME)
     )
 
     if (len(authcode_data.scopes) > 1):
@@ -231,7 +232,7 @@ async def create_tokens_from_authcode_data(authcode_data: AuthorizationCodeData)
         access_token=encode_to_jwt_token_oidc(access_token.model_dump()),
         refresh_token=encode_to_jwt_token_oidc(refresh_token.model_dump()),
         id_token=encode_to_jwt_token_oidc(id_token.model_dump(exclude_none=True)),
-        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expires_in=ACCESS_TOKEN_EXPIRE_TIME,
     )
 
 

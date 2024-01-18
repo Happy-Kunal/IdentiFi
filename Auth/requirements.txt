@@ -1,6 +1,7 @@
 cassandra-driver
 
 pydantic[email]
+pydantic-settings
 fastapi
 uvicorn[standard]
 

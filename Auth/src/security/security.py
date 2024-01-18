@@ -10,6 +10,7 @@ from fastapi import Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 
 
+from src.config import cfg
 from src.types.user_types import UserType
 from src.crud.crud_ops import CRUDOps
 from src.schemas.token import TokenResponse, AccessTokenData, RefreshTokenData
@@ -35,9 +36,9 @@ from .utils import (
 
 
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_TOKEN_EXPIRE_MINUTES = 24 * 60 # 24 hours
-ISSUER = "http://127.0.0.1:8000/"
+ACCESS_TOKEN_EXPIRE_TIME = cfg.same_site.exp_time.access_token
+REFRESH_TOKEN_EXPIRE_TIME = cfg.same_site.exp_time.refresh_token
+ISSUER = cfg.issuer
 
 
 router = APIRouter(prefix="/auth")
@@ -63,7 +64,7 @@ async def access_token_using_password_grant(username: str, password: str, scopes
         user_type=processed_scopes.user_type,
         iss=ISSUER,
         scopes=processed_scopes.scopes,
-        exp=datetime.now(timezone.utc) + timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
+        exp=datetime.now(timezone.utc) + timedelta(seconds=REFRESH_TOKEN_EXPIRE_TIME)
     )
 
     refresh_token = encode_to_jwt_token(refresh_token_data.model_dump())
@@ -73,7 +74,7 @@ async def access_token_using_password_grant(username: str, password: str, scopes
         sub=f"{user.client_id}:{user.username}",
         user_type=processed_scopes.user_type,
         iss=ISSUER,
-        exp=datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        exp=datetime.now(timezone.utc) + timedelta(seconds=ACCESS_TOKEN_EXPIRE_TIME),
         scopes=processed_scopes.scopes
     )
     
@@ -82,7 +83,7 @@ async def access_token_using_password_grant(username: str, password: str, scopes
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
-        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expires_in=ACCESS_TOKEN_EXPIRE_TIME,
         refresh_token=refresh_token,
         scope=" ".join(access_token_data.scopes)
     )
@@ -107,7 +108,7 @@ async def access_token_using_refresh_token_grant(refresh_token: str) -> TokenRes
         sub=refresh_token_data.sub,
         user_type=refresh_token_data.user_type,
         iss=refresh_token_data.iss,
-        exp=min(refresh_token_data.exp, datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)),
+        exp=min(refresh_token_data.exp, datetime.now(timezone.utc) + timedelta(seconds=ACCESS_TOKEN_EXPIRE_TIME)),
         scopes=refresh_token_data.scopes
     )
 

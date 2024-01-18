@@ -1,7 +1,8 @@
 from typing import Set
 import uuid
 
-from .syncer import CassandraSyncer
+
+from src.config import cfg
 
 from src.models.principal_user_model import PrincipalUserModel
 from src.models.service_provider_model import ServiceProviderModel
@@ -10,11 +11,15 @@ from src.schemas.principal_user import PrincipalUserInDBSchema
 from src.schemas.service_provider import ServiceProviderInDBSchema
 from src.types.scopes import OIDCScopes
 
-UPDATE_DB_SCHEMA = False
 
-CASSANDRA_HOSTS = ["localhost"]
-CASSANDRA_KEYSPACE = "identifi_auth"
-CASSANDRA_PROTOCOL_VERSION = 3
+from .syncer import CassandraSyncer
+
+
+UPDATE_DB_SCHEMA = cfg.db.schemas.update
+
+CASSANDRA_HOSTS = cfg.db.cassandra.hosts
+CASSANDRA_KEYSPACE = cfg.db.cassandra.keyspace
+CASSANDRA_PROTOCOL_VERSION = cfg.db.cassandra.protocol_version
 
 models = [
     PrincipalUserModel,

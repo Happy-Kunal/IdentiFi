@@ -11,6 +11,7 @@ from jose import jwt, JWTError
 from passlib.context import CryptContext
 
 
+from src.config import cfg
 from src.types.user_types import UserType, PrincipalUserTypes
 from src.types.scopes import Scopes
 from src.crud.crud_ops import CRUDOps
@@ -27,11 +28,11 @@ from .exceptions import (
     not_enough_permission_exception
 )
 
-HTTPS_ONLY = False # Must be True For Production use cases
-REFRESH_TOKEN_EXPIRE_MINUTES = 24 * 60 # 24 hours
-SAME_SITE_JWT_SIGNING_ALGORITHM = "RS256" # RSA
-SAME_SITE_JWT_SIGNING_PRIVATE_KEY = "<PRIVATE_SECRET_KEY>" # openssl genpkey -algorithm RSA -out private_key.pem
-SAME_SITE_JWT_SIGNING_PUBLIC_KEY = "<PUBLIC_SECRET_KEY>" # openssl rsa -pubout -in private_key.pem -out public_key.pem
+HTTPS_ONLY_COOKIE = cfg.cookies.https_only
+REFRESH_TOKEN_EXPIRE_TIME = cfg.same_site.exp_time.refresh_token
+SAME_SITE_JWT_SIGNING_ALGORITHM = cfg.same_site.jwt.signing_algorithm
+SAME_SITE_JWT_SIGNING_PRIVATE_KEY = cfg.same_site.jwt.keys.private_key
+SAME_SITE_JWT_SIGNING_PUBLIC_KEY = cfg.same_site.jwt.keys.public_key
 
 
 scopes = {
@@ -123,7 +124,7 @@ def set_tokens_in_cookie(response: Response, token: TokenResponse, cookie_path_f
         key="access_token",
         value=token.access_token,
         expires=token.expires_in,
-        secure=HTTPS_ONLY,
+        secure=HTTPS_ONLY_COOKIE,
         httponly=True,
         samesite="strict"
     )
@@ -131,9 +132,9 @@ def set_tokens_in_cookie(response: Response, token: TokenResponse, cookie_path_f
     response.set_cookie(
         key="refresh_token",
         value=token.refresh_token,
-        expires=REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+        expires=REFRESH_TOKEN_EXPIRE_TIME,
         path=cookie_path_for_refresh_token,
-        secure=HTTPS_ONLY,
+        secure=HTTPS_ONLY_COOKIE,
         httponly=True,
         samesite="strict"
     )

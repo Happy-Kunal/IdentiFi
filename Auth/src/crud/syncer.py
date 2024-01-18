@@ -1,19 +1,21 @@
 import os
 from typing import List
 
-from cassandra.cluster import Cluster
 
+from cassandra.cluster import Cluster
 from cassandra.cqlengine.models import Model
 from cassandra.cqlengine import connection
 from cassandra.cqlengine.management import CQLENG_ALLOW_SCHEMA_MANAGEMENT
 from cassandra.cqlengine.management import sync_table, create_keyspace_simple
 
+
+from src.config import cfg
 from .syncer_exceptions import MoreThanSingleInstanceException, MoreThanOneSyncCallsException
 
 
-CASSANDRA_HOSTS = ["localhost"]
-CASSANDRA_KEYSPACE = "identifi_auth"
-CASSANDRA_PROTOCOL_VERSION = 3
+CASSANDRA_HOSTS = cfg.db.cassandra.hosts
+CASSANDRA_KEYSPACE = cfg.db.cassandra.keyspace
+CASSANDRA_PROTOCOL_VERSION = cfg.db.cassandra.protocol_version
 
 
 class CassandraSyncer:
