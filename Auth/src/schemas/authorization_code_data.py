@@ -8,6 +8,7 @@ from pydantic import field_serializer
 
 from src.types.scopes import OIDCScopes
 
+
 class AuthorizationCodeData(BaseModel):
     sub: str
     redirect_uri: HttpUrl

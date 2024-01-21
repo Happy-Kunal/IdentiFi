@@ -9,11 +9,11 @@
 # accepting refresh_token instead of other fields when grant_type=refresh_token
 
 
-from typing_extensions import Annotated, Doc
 from typing import Union
+from typing_extensions import Annotated, Doc
 
 
-from fastapi import Cookie, Form
+from fastapi import Form
 from fastapi import Request
 from fastapi import status, HTTPException
 

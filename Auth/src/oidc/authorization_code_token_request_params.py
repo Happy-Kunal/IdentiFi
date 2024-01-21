@@ -1,15 +1,11 @@
 from typing import Union
-from typing_extensions import Annotated, Doc
 from uuid import UUID
 
-from pydantic import BaseModel
-from pydantic import HttpUrl
-
-from fastapi import Form, Depends
-from fastapi import Request
-from fastapi import HTTPException, status
+from fastapi import Depends, Form, HTTPException, Request, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import BaseModel, HttpUrl
 
+from typing_extensions import Annotated, Doc
 
 
 http_basic_auth_scheme = HTTPBasic()

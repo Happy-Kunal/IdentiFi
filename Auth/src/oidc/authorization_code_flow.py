@@ -1,58 +1,52 @@
 import logging
 import urllib.parse
-from typing import Union, List, Set, cast, Dict, Any
-from typing_extensions import Annotated
-from uuid import UUID
+from datetime import datetime, timedelta, timezone
 from secrets import compare_digest
-from datetime import datetime, timezone, timedelta
+from typing import Any, Dict, List, Set, Union, cast
+from uuid import UUID
 
-from pydantic import HttpUrl
 from fastapi import APIRouter
 from fastapi import Depends
-from fastapi import Request, Response
 from fastapi import HTTPException, status
+from fastapi import Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2AuthorizationCodeBearer
-
 from jose import jwe
 from jose.exceptions import JWEError
+from pydantic import HttpUrl
+
+from typing_extensions import Annotated
 
 from src.config import cfg
-from src.crud.crud_ops import CRUDOps
-from src.schemas.principal_user import PrincipalUserInDBSchema
-from src.schemas.token import (
-    AccessTokenData,
-    OIDCAccessTokenData,
-    OIDCRefreshTokenData,
-    OIDCIDTokenData,
-    OIDCTokenResponse,
-)
-from src.security.exceptions import not_enough_permission_exception
-from src.security.utils import (
-    encode_to_jwt_token as encode_to_jwt_token_same_site,
-    decode_jwt_token    as decode_jwt_token_same_site,
-    oauth2_scheme       as user_jwt_access_token_getter_async
-)
+from src.crud import CRUDOps
+from src.schemas import (AccessTokenData, AuthorizationCodeData,
+                         OIDCAccessTokenData, OIDCIDTokenData,
+                         OIDCRefreshTokenData, OIDCTokenResponse,
+                         PrincipalUserInDBSchema)
+from src.security import decode_jwt_token as decode_jwt_token_same_site
+from src.security import encode_to_jwt_token as encode_to_jwt_token_same_site
+from src.security import not_enough_permission_exception
+from src.security import oauth2_scheme as user_jwt_access_token_getter_async
+from src.types import UserType
 from src.types.scopes import OIDCScopes
-from src.types.user_types import UserType
 
-from .request_parameters import OAuth2AuthorizationCodeRequestForm, OAuth2AuthorizationCodeRequestQuery
-from .authorization_code_data import AuthorizationCodeData
-from .authorization_code_token_request import AuthorizationCodeTokenRequestParams
+from .authorization_code_request_params import (
+    OAuth2AuthorizationCodeRequestForm, OAuth2AuthorizationCodeRequestQuery)
+from .authorization_code_token_request_params import AuthorizationCodeTokenRequestParams
 
 
-LOGIN_ENDPOINT = cfg.login_endpoint
-JWE_KEY_MANAGEMENT_ALGORITHM = cfg.oidc.jwe.algorithms.key_management
-JWE_ENCRYPT_ALGORITHM = cfg.oidc.jwe.algorithms.encryption
-JWE_SECRET_KEY = cfg.oidc.jwe.secret_key
+ACCESS_TOKEN_EXPIRE_TIME       = cfg.oidc.exp_time.access_token
 AUTHORIZATION_CODE_EXPIRE_TIME = cfg.oidc.exp_time.authcode
-OIDC_JWT_SIGNING_ALGORITHM = cfg.oidc.jwt.signing_algorithm
-OIDC_JWT_SIGNING_PRIVATE_KEY = cfg.oidc.jwt.keys.private_key
-OIDC_JWT_SIGNING_PUBLIC_KEY = cfg.oidc.jwt.keys.public_key
-ACCESS_TOKEN_EXPIRE_TIME = cfg.oidc.exp_time.access_token
-REFRESH_TOKEN_EXPIRE_TIME = cfg.oidc.exp_time.refresh_token
-ID_TOKEN_EXPIRE_TIME = cfg.oidc.exp_time.id_token
-ISSUER = cfg.issuer
+ID_TOKEN_EXPIRE_TIME           = cfg.oidc.exp_time.id_token
+ISSUER                         = cfg.issuer
+JWE_ENCRYPT_ALGORITHM          = cfg.oidc.jwe.algorithms.encryption
+JWE_KEY_MANAGEMENT_ALGORITHM   = cfg.oidc.jwe.algorithms.key_management
+JWE_SECRET_KEY                 = cfg.oidc.jwe.secret_key
+LOGIN_ENDPOINT                 = cfg.login_endpoint
+OIDC_JWT_SIGNING_ALGORITHM     = cfg.oidc.jwt.signing_algorithm
+OIDC_JWT_SIGNING_PRIVATE_KEY   = cfg.oidc.jwt.keys.private_key
+OIDC_JWT_SIGNING_PUBLIC_KEY    = cfg.oidc.jwt.keys.public_key
+REFRESH_TOKEN_EXPIRE_TIME      = cfg.oidc.exp_time.refresh_token
 
 
 

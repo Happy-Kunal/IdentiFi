@@ -1,25 +1,19 @@
-from typing import Set
 import uuid
-
+from typing import Set
 
 from src.config import cfg
-
-from src.models.principal_user_model import PrincipalUserModel
-from src.models.service_provider_model import ServiceProviderModel
-
-from src.schemas.principal_user import PrincipalUserInDBSchema
-from src.schemas.service_provider import ServiceProviderInDBSchema
+from src.models import PrincipalUserModel, ServiceProviderModel
+from src.schemas import PrincipalUserInDBSchema, ServiceProviderInDBSchema
 from src.types.scopes import OIDCScopes
-
 
 from .syncer import CassandraSyncer
 
 
-UPDATE_DB_SCHEMA = cfg.db.schemas.update
-
 CASSANDRA_HOSTS = cfg.db.cassandra.hosts
 CASSANDRA_KEYSPACE = cfg.db.cassandra.keyspace
 CASSANDRA_PROTOCOL_VERSION = cfg.db.cassandra.protocol_version
+
+UPDATE_DB_SCHEMA = cfg.db.schemas.update
 
 models = [
     PrincipalUserModel,
@@ -35,7 +29,8 @@ class CRUDOps:
     @staticmethod
     def get_prinicipal_user_by_username(client_id: uuid.UUID, username: str):
         import uuid
-        from src.types.user_types import PrincipalUserTypes
+
+        from src.types import PrincipalUserTypes
         data = {
             "client_id"          : client_id,
             "user_id"         : uuid.uuid4(),
@@ -76,7 +71,7 @@ class CRUDOps:
     
     @staticmethod
     def get_principal_user_by_user_id(client_id: uuid.UUID, user_id: uuid.UUID) -> PrincipalUserInDBSchema:
-        from src.types.user_types import PrincipalUserTypes
+        from src.types import PrincipalUserTypes
 
         return PrincipalUserInDBSchema(
             client_id=client_id,
@@ -90,7 +85,7 @@ class CRUDOps:
         )
     
     @staticmethod
-    def get_scopes_granted_by_user_to_client(user_id, user_client_id, client_id):
+    def get_scopes_granted_by_user_to_client(user_id, user_client_id, client_id) -> Set[OIDCScopes]:
         return set(OIDCScopes.__members__.keys())
     
 

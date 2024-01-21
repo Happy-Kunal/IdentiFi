@@ -4,6 +4,7 @@ from fastapi import status, HTTPException
 
 from src.types.scopes import Scopes
 
+
 invalid_token_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Could not validate credentials",

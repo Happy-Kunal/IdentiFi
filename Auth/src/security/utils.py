@@ -1,32 +1,26 @@
-from typing import List, Dict, Any, Union
+from typing import Any, Dict, List, Union
 from uuid import UUID
+
+from fastapi import Depends, Response
+from fastapi.security import OAuth2PasswordBearer, SecurityScopes
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from pydantic import ValidationError
 from typing_extensions import Annotated
 
-
-from pydantic import ValidationError
-from fastapi import Depends
-from fastapi import Response
-from fastapi.security import OAuth2PasswordBearer, SecurityScopes
-from jose import jwt, JWTError
-from passlib.context import CryptContext
-
-
 from src.config import cfg
-from src.types.user_types import UserType, PrincipalUserTypes
+from src.crud import CRUDOps
+from src.schemas import (PrincipalUserInDBSchema, ProcessedScopes,
+                         ServiceProviderInDBSchema)
+from src.schemas.tokens import AccessTokenData, TokenResponse
+from src.types import PrincipalUserTypes, UserType
 from src.types.scopes import Scopes
-from src.crud.crud_ops import CRUDOps
 
-from src.schemas.token import TokenResponse, AccessTokenData
-from src.schemas.processed_scopes import ProcessedScopes
-from src.schemas.principal_user import PrincipalUserInDBSchema
-from src.schemas.service_provider import ServiceProviderInDBSchema
+from .exceptions import (credentials_exception,
+                         invalid_scopes_selection_exception,
+                         invalid_token_exception,
+                         not_enough_permission_exception)
 
-from .exceptions import (
-    credentials_exception,
-    invalid_scopes_selection_exception,
-    invalid_token_exception,
-    not_enough_permission_exception
-)
 
 HTTPS_ONLY_COOKIE = cfg.cookies.https_only
 REFRESH_TOKEN_EXPIRE_TIME = cfg.same_site.exp_time.refresh_token

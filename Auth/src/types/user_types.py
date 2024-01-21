@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class UserType(str, Enum):
     PRINCIPAL_USER = "PRINCIPAL_USER"
     SERVICE_PROVIDER = "SERVICE_PROVIDER"

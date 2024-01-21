@@ -1,17 +1,13 @@
 from typing import Union
+
+from fastapi import Depends, FastAPI
+from fastapi.staticfiles import StaticFiles
 from typing_extensions import Annotated
 
-from fastapi import FastAPI
-from fastapi import Depends
-from fastapi.staticfiles import StaticFiles
-
-from src.security.security import router as security_router
-from src.security.utils import get_current_user
-
-from src.schemas.principal_user import PrincipalUserOutputSchema
-from src.schemas.service_provider import ServiceProviderOutputSchema
-
-from src.oidc.oidc_authorization_code_flow import router as oidc_router
+from src.oidc import router as oidc_router
+from src.schemas import PrincipalUserOutputSchema, ServiceProviderOutputSchema
+from src.security import get_current_user
+from src.security import router as security_router
 
 app = FastAPI()
 

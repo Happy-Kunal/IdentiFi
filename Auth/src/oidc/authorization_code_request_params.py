@@ -1,10 +1,11 @@
 from typing import Union
-from typing_extensions import Annotated, Doc
-
 from uuid import UUID
-from pydantic import HttpUrl
 
 from fastapi import Form, Query
+from pydantic import HttpUrl
+
+from typing_extensions import Annotated, Doc
+
 
 class OAuth2AuthorizationCodeRequestForm:
     """

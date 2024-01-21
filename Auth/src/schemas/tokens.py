@@ -4,10 +4,11 @@ from datetime import datetime
 
 from pydantic import BaseModel
 from pydantic import field_serializer
-from pydantic import EmailStr
+from pydantic import EmailStr, HttpUrl
 
-from src.types.user_types import UserType
+from src.types import UserType
 from src.types.scopes import Scopes, OIDCScopes
+
 
 class TokenResponseBase(BaseModel):
     access_token: str
@@ -27,8 +28,13 @@ class OIDCTokenResponse(TokenResponseBase):
 class TokenDataBase(BaseModel):
     sub: str
     user_type: UserType
-    iss: str
+    iss: HttpUrl
     exp: datetime
+
+
+    @field_serializer("iss")
+    def serialize_iss(self, iss, _info):
+        return str(iss)
 
 
 class AccessTokenData(TokenDataBase):
@@ -65,7 +71,7 @@ class OIDCIDTokenData(OIDCCommons):
     required claims as per:
     https://openid.net/specs/openid-connect-core-1_0.html#IDToken
     """
-    iss: str
+    iss: HttpUrl
     sub: str
     exp: datetime
     iat: datetime
@@ -75,3 +81,8 @@ class OIDCIDTokenData(OIDCCommons):
     preferred_username: Union[str, None] = None
 
     user_type: UserType = UserType.OIDC_CLIENT
+
+
+    @field_serializer("iss")
+    def serialize_iss(self, iss, _info):
+        return str(iss)

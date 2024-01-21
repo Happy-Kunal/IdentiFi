@@ -4,7 +4,8 @@ from pydantic import BaseModel
 from pydantic import field_serializer
 from pydantic import EmailStr
 
-from src.types.user_types import PrincipalUserTypes
+from src.types import PrincipalUserTypes
+
 
 class PrincipalUserBaseSchema(BaseModel):
     client_id: UUID

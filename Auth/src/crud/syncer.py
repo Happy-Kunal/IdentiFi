@@ -1,13 +1,11 @@
 import os
 from typing import List
 
-
 from cassandra.cluster import Cluster
-from cassandra.cqlengine.models import Model
 from cassandra.cqlengine import connection
+from cassandra.cqlengine.models import Model
 from cassandra.cqlengine.management import CQLENG_ALLOW_SCHEMA_MANAGEMENT
 from cassandra.cqlengine.management import sync_table, create_keyspace_simple
-
 
 from src.config import cfg
 from .syncer_exceptions import MoreThanSingleInstanceException, MoreThanOneSyncCallsException
@@ -24,7 +22,9 @@ class CassandraSyncer:
     
     def __init__(self) -> None:
         if (not self.no_previous_instance):
-            raise MoreThanSingleInstanceException("only 1 instanace of CassandraSyncer is allowed")
+            raise MoreThanSingleInstanceException(
+                "only 1 instanace of CassandraSyncer is allowed"
+            )
         
         CassandraSyncer.no_previous_instance = False
 
@@ -40,7 +40,12 @@ class CassandraSyncer:
         
         os.environ[CQLENG_ALLOW_SCHEMA_MANAGEMENT] = "True"
         
-        create_keyspace_simple(CASSANDRA_KEYSPACE, connections=["CassandraSyncerConnection"], replication_factor=min(3, len(CASSANDRA_HOSTS)))
+        create_keyspace_simple(
+            CASSANDRA_KEYSPACE,
+            connections=["CassandraSyncerConnection"],
+            replication_factor=min(3, len(CASSANDRA_HOSTS))
+        )
+        
         for model in models:
             sync_table(model, keyspaces=[CASSANDRA_KEYSPACE], connections=["CassandraSyncerConnection"])
 

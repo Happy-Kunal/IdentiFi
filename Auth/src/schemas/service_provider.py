@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field
 from pydantic import field_serializer
 from pydantic import EmailStr
 
+from src.types import ServiceProviderTypes
 
-from src.types.user_types import ServiceProviderTypes
 
 class ServiceProviderBaseSchema(BaseModel):
     client_id: UUID

@@ -1,44 +1,28 @@
-from typing import List, Union
-from uuid import UUID
 from datetime import datetime, timedelta, timezone
+from typing import List
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Form, Request, Response
+from fastapi.security import OAuth2PasswordRequestForm
 from typing_extensions import Annotated
 
-
-from fastapi import APIRouter
-from fastapi import Cookie, Depends, Form
-from fastapi import Request, Response
-from fastapi.security import OAuth2PasswordRequestForm
-
-
 from src.config import cfg
-from src.types.user_types import UserType
-from src.crud.crud_ops import CRUDOps
-from src.schemas.token import TokenResponse, AccessTokenData, RefreshTokenData
-from src.schemas.processed_scopes import ProcessedScopes
+from src.crud import CRUDOps
+from src.schemas import ProcessedScopes
+from src.schemas.tokens import AccessTokenData, RefreshTokenData, TokenResponse
+from src.types import UserType
 
-from .exceptions import (
-    credentials_exception,
-    invalid_token_exception,
-    not_enough_permission_exception
-)
-
+from .exceptions import (credentials_exception, invalid_token_exception,
+                         not_enough_permission_exception)
 from .request_params import OAuth2PasswordOrRefreshTokenRequestParams
-
-from .utils import (
-    authenticate_user,
-    decode_jwt_token,
-    encode_to_jwt_token,
-    is_allowed_to_grant_scopes_to_user,
-    process_scopes,
-    set_tokens_in_cookie,
-)
-
-
+from .utils import (authenticate_user, decode_jwt_token, encode_to_jwt_token,
+                    is_allowed_to_grant_scopes_to_user, process_scopes,
+                    set_tokens_in_cookie)
 
 
 ACCESS_TOKEN_EXPIRE_TIME = cfg.same_site.exp_time.access_token
-REFRESH_TOKEN_EXPIRE_TIME = cfg.same_site.exp_time.refresh_token
 ISSUER = cfg.issuer
+REFRESH_TOKEN_EXPIRE_TIME = cfg.same_site.exp_time.refresh_token
 
 
 router = APIRouter(prefix="/auth")

@@ -1,10 +1,10 @@
 import uuid
 
 from cassandra.cqlengine import columns
-from cassandra.cqlengine.models import Model
 from cassandra.cqlengine import ValidationError
+from cassandra.cqlengine.models import Model
 
-from src.types.user_types import PrincipalUserTypes
+from src.types import PrincipalUserTypes
 
 
 class PrincipalUserModel(Model):

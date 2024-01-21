@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Scopes(str, Enum):
     """
     these scopes are used by authorization server to identify
