@@ -4,6 +4,8 @@ from .principal_user import (PrincipalUserBaseSchema, PrincipalUserInDBSchema,
                              PrincipalUserInputSchema,
                              PrincipalUserOutputSchema)
 
+from .principal_user_client_id import PrincipalUserClientIDSchema
+
 from .processed_scopes import ProcessedScopes
 
 from .service_provider import (ServiceProviderBaseSchema,

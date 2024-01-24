@@ -9,7 +9,7 @@ from src.types import PrincipalUserTypes
 
 class PrincipalUserModel(Model):
     __table_name__ = "principal_user"
-    client_id          = columns.UUID(partition_key=True, default=uuid.uuid4)
+    client_id       = columns.UUID(partition_key=True, default=uuid.uuid4)
     user_id         = columns.UUID(primary_key=True, default=uuid.uuid4)
     email           = columns.Text(primary_key=True, required=True)
     username        = columns.Text(primary_key=True, required=True, index=True, min_length=6, max_length=255)

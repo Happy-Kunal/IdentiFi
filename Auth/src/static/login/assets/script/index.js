@@ -1,6 +1,5 @@
 function login() {
   const form = document.getElementById("login-form");
-  // form.addEventListener("submit", (e) => e.preventDefault());
 
   const formData = new FormData(form);
 
@@ -36,13 +35,12 @@ function login() {
       return response.json(); // Parse the JSON response
     })
     .then((data) => {
-      console.log(data);
       console.log("POST request (login) successful:");
 
       const currentUrl = window.location.href;
       const urlSearchParams = new URLSearchParams(new URL(currentUrl).search);
       const redirect_uri = urlSearchParams.get("redirect_uri");
-      //   console.log(redirect_uri);
+
       window.location.href = redirect_uri;
     })
     .catch((error) => {
