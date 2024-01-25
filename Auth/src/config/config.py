@@ -1,6 +1,5 @@
 # https://docs.pydantic.dev/latest/concepts/pydantic_settings/
 
-import os
 from typing import Any, List, Literal
 
 from pydantic import BaseModel, Field
@@ -8,7 +7,6 @@ from pydantic import HttpUrl, PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-DOTENV_PATH = os.path.join(os.path.dirname(__file__), ".env")
 
 
 class Cassandra(BaseModel):
@@ -87,7 +85,7 @@ class SameSite(BaseModel):
 
 
 class Config(BaseSettings):
-    model_config = SettingsConfigDict(env_file=DOTENV_PATH, env_file_encoding='utf-8', env_nested_delimiter=".")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding='utf-8', env_nested_delimiter="__")
 
 
     cookies: Cookies
