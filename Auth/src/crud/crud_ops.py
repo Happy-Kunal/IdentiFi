@@ -81,7 +81,7 @@ class CRUDOps:
     
     @staticmethod
     def get_scopes_granted_by_user_to_client(user_id, user_client_id, client_id) -> Set[OIDCScopes]:
-        return set(OIDCScopes.__members__.keys())
+        return set([scope.value for scope in OIDCScopes.__members__.values()])
     
     @staticmethod
     def get_principal_user_client_id_by_org_username(org_username: str):

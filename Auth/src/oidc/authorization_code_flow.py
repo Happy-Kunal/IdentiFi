@@ -76,6 +76,9 @@ invalid_client_id_exception = HTTPException(
 )
 
 
+VALID_OIDC_SCOPES = {scope.value for scope in OIDCScopes.__members__.values()}
+
+
 router = APIRouter(prefix="/oauth2")
 
 
@@ -147,7 +150,7 @@ async def is_consent_form_required(user: PrincipalUserInDBSchema, client_id: UUI
                                             user_client_id=user.client_id,
                                             client_id=client_id
                                         )
-
+    
     for scope in scopes:
         if (scope not in granted_scopes):
             return True
@@ -245,19 +248,21 @@ async def authorize(
             return await display_login_screen(redirect_uri=request.url._url)
     
     user = await get_logged_in_user(access_token=access_token)
+    valid_requested_scopes = query_data.scopes.intersection(VALID_OIDC_SCOPES)
+
 
     if (not user):
         return await display_login_screen(redirect_uri=request.url._url)
     elif (not await authenticate_client_async(client_id=query_data.client_id)):
         raise invalid_client_id_exception
-    elif (await is_consent_form_required(user=user, client_id=query_data.client_id, scopes=query_data.scopes)):
+    elif (await is_consent_form_required(user=user, client_id=query_data.client_id, scopes=valid_requested_scopes)):
         return await send_consent_form(redirect_uri=request.url._url)
     else:
         auth_code = await generate_authorization_code(
             user=user,
             client_id=query_data.client_id,
             redirect_uri=query_data.redirect_uri,
-            scopes=query_data.scopes
+            scopes=valid_requested_scopes
         )
 
         return RedirectResponse(
