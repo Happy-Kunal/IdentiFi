@@ -1,4 +1,3 @@
-from typing import List, Union
 from uuid import UUID
 from datetime import datetime
 
@@ -38,7 +37,7 @@ class TokenDataBase(BaseModel):
 
 
 class AccessTokenData(TokenDataBase):
-    scopes: List[Scopes]
+    scopes: list[Scopes]
 
 
 class RefreshTokenData(AccessTokenData):
@@ -59,7 +58,7 @@ class OIDCCommons(BaseModel):
 
 
 class OIDCAccessTokenData(TokenDataBase, OIDCCommons):
-    scopes: List[OIDCScopes]
+    scopes: list[OIDCScopes]
 
 
 class OIDCRefreshTokenData(OIDCAccessTokenData):
@@ -76,9 +75,9 @@ class OIDCIDTokenData(OIDCCommons):
     exp: datetime
     iat: datetime
 
-    email: Union[EmailStr, None] = None
-    name: Union[str, None] = None
-    preferred_username: Union[str, None] = None
+    email: EmailStr | None = None
+    name: str | None = None
+    preferred_username: str | None = None
 
     user_type: UserType = UserType.OIDC_CLIENT
 

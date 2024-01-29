@@ -2,7 +2,7 @@ import logging
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 from secrets import compare_digest
-from typing import Any, Dict, List, Set, Union, cast
+from typing import Any, cast, Annotated
 from uuid import UUID
 
 from fastapi import APIRouter
@@ -15,7 +15,6 @@ from jose import jwe
 from jose.exceptions import JWEError
 from pydantic import HttpUrl
 
-from typing_extensions import Annotated
 
 from src.config import cfg
 from src.crud import CRUDOps
@@ -82,7 +81,7 @@ VALID_OIDC_SCOPES = {scope.value for scope in OIDCScopes.__members__.values()}
 router = APIRouter(prefix="/oauth2")
 
 
-def encode_to_jwt_token_oidc(data: Dict[str, Any]) -> str:
+def encode_to_jwt_token_oidc(data: dict[str, Any]) -> str:
     return encode_to_jwt_token_same_site(
         data=data,
         algorithm=OIDC_JWT_SIGNING_ALGORITHM,
@@ -90,7 +89,7 @@ def encode_to_jwt_token_oidc(data: Dict[str, Any]) -> str:
     )
 
 
-def decode_jwt_token_oidc(token: str) -> Dict[str, Any]:
+def decode_jwt_token_oidc(token: str) -> dict[str, Any]:
     return decode_jwt_token_same_site(
         token=token,
         algorithms=[OIDC_JWT_SIGNING_ALGORITHM],
@@ -116,7 +115,7 @@ def decrypt_string(data: str):
         )
 
 
-async def get_logged_in_user(access_token: str) -> Union[PrincipalUserInDBSchema, None]:
+async def get_logged_in_user(access_token: str) -> PrincipalUserInDBSchema | None:
     token_data = AccessTokenData(**decode_jwt_token_same_site(access_token))
     client_id, _, username = token_data.sub.partition(":")
     if (token_data.user_type == UserType.PRINCIPAL_USER):
@@ -136,7 +135,7 @@ async def display_login_screen(redirect_uri: HttpUrl):
     )
 
 
-async def authenticate_client_async(client_id: UUID, client_secret: Union[str, None] = None):
+async def authenticate_client_async(client_id: UUID, client_secret: str | None = None):
     client = CRUDOps.get_service_provider_by_client_id(client_id)
     if (client):
         return client_secret is None or compare_digest(client.client_secret, client_secret)
@@ -144,8 +143,8 @@ async def authenticate_client_async(client_id: UUID, client_secret: Union[str, N
     return False
 
 
-async def is_consent_form_required(user: PrincipalUserInDBSchema, client_id: UUID, scopes: List[OIDCScopes]):
-    granted_scopes: Set[OIDCScopes] = CRUDOps.get_scopes_granted_by_user_to_client(
+async def is_consent_form_required(user: PrincipalUserInDBSchema, client_id: UUID, scopes: list[OIDCScopes]):
+    granted_scopes: set[OIDCScopes] = CRUDOps.get_scopes_granted_by_user_to_client(
                                             user_id=user.user_id,
                                             user_client_id=user.client_id,
                                             client_id=client_id
@@ -167,7 +166,7 @@ async def generate_authorization_code(
     user: PrincipalUserInDBSchema,
     client_id: UUID,
     redirect_uri: HttpUrl,
-    scopes: List[OIDCScopes]
+    scopes: list[OIDCScopes]
 ) -> str:
     authorization_code_data = AuthorizationCodeData(
         sub=f"{user.client_id}:{user.username}",

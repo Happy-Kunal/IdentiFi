@@ -1,11 +1,11 @@
-from typing import Union
+from typing import Annotated
+from typing_extensions import Doc
 from uuid import UUID
 
 from fastapi import Depends, Form, HTTPException, Request, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel, HttpUrl
 
-from typing_extensions import Annotated, Doc
 
 
 http_basic_auth_scheme = HTTPBasic()
@@ -53,7 +53,7 @@ class __AuthorizationCodeTokenRequest:
             )
         ],
         redirect_uri: Annotated[
-            Union[HttpUrl, None],
+            HttpUrl | None,
             Form(),
             Doc(
                 """
@@ -65,7 +65,7 @@ class __AuthorizationCodeTokenRequest:
             )
         ] = None,
         client_id: Annotated[
-            Union[UUID, None],
+            UUID | None,
             Form(),
             Doc(
                 """
@@ -80,7 +80,7 @@ class __AuthorizationCodeTokenRequest:
             )
         ] = None,
         client_secret: Annotated[
-            Union[str, None],
+            str | None,
             Form(),
             Doc(
                 """

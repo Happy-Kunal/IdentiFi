@@ -1,6 +1,6 @@
 # https://docs.pydantic.dev/latest/concepts/pydantic_settings/
 
-from typing import Any, List, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic import HttpUrl, PositiveInt
@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Cassandra(BaseModel):
-    hosts: List[str]
+    hosts: list[str]
     keyspace: str
     protocol_version: PositiveInt = 3
 

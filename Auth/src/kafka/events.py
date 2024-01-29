@@ -3,19 +3,21 @@
 
 
 from abc import ABC, abstractmethod
-from typing import Union
 
 
 
 class EventInterface(ABC):
     @abstractmethod
-    def get_topic(self) -> str:...
+    def get_topic(self) -> str:
+        raise NotImplementedError
 
     @abstractmethod
-    def get_value(self) -> Union[str, bytes]:...
+    def get_value(self) -> str | bytes:
+        raise NotImplementedError
 
     @abstractmethod
-    def get_key(self) -> Union[str, bytes]:...
+    def get_key(self) -> str | bytes:
+        raise NotImplementedError
 
 
 class PrincipalUserWorkerDraftEvent(EventInterface):
@@ -29,8 +31,8 @@ class PrincipalUserWorkerDraftEvent(EventInterface):
     def get_topic(self) -> str:
         return self.topic
     
-    def get_value(self) -> Union[str, bytes]:
+    def get_value(self) -> str | bytes:
         return "fake value"
     
-    def get_key(self) -> Union[str, bytes]:
+    def get_key(self) -> str | bytes:
         return "fake key"

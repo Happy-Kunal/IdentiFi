@@ -1,5 +1,4 @@
-from typing import List
-from typing_extensions import Annotated
+from typing  import Annotated
 from uuid import uuid4, UUID
 
 from fastapi import APIRouter
@@ -28,7 +27,7 @@ AdminType = Annotated[
 #                          get methods                              #
 #####################################################################
 
-@router.get("/list", response_model=List[PrincipalUserOutputSchema])
+@router.get("/list", response_model=list[PrincipalUserOutputSchema])
 async def get_users_in_admins_org(
     admin: AdminType,
     limit: int = 25,
@@ -41,7 +40,7 @@ async def get_users_in_admins_org(
     )
 
 
-@router.get("/email/search", response_model=List[PrincipalUserOutputSchema])
+@router.get("/email/search", response_model=list[PrincipalUserOutputSchema])
 async def search_principal_user_in_admins_org_by_email(
     admin: AdminType,
     q: str,
@@ -56,7 +55,7 @@ async def search_principal_user_in_admins_org_by_email(
     )
 
 
-@router.get("/usernames/search", response_model=List[PrincipalUserOutputSchema])
+@router.get("/usernames/search", response_model=list[PrincipalUserOutputSchema])
 async def search_principal_user_in_admins_org_by_username(
     admin: AdminType,
     q: str,

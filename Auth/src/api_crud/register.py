@@ -1,4 +1,4 @@
-from typing_extensions import Annotated
+from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter

@@ -9,8 +9,8 @@
 # accepting refresh_token instead of other fields when grant_type=refresh_token
 
 
-from typing import Union
-from typing_extensions import Annotated, Doc
+from typing import Annotated
+from typing_extensions import Doc
 
 
 from fastapi import Form
@@ -54,7 +54,7 @@ class OAuth2PasswordOrRefreshTokenRequestParams:
             ),
         ],
         username: Annotated[
-            Union[str, None],
+            str | None,
             Form(),
             Doc(
                 """
@@ -64,7 +64,7 @@ class OAuth2PasswordOrRefreshTokenRequestParams:
             ),
         ] = None,
         password: Annotated[
-            Union[str, None],
+            str | None,
             Form(),
             Doc(
                 """
@@ -100,7 +100,7 @@ class OAuth2PasswordOrRefreshTokenRequestParams:
             ),
         ] = "",
         client_id: Annotated[
-            Union[str, None],
+            str | None,
             Form(),
             Doc(
                 """
@@ -111,7 +111,7 @@ class OAuth2PasswordOrRefreshTokenRequestParams:
             ),
         ] = None,
         client_secret: Annotated[
-            Union[str, None],
+            str | None,
             Form(),
             Doc(
                 """
@@ -123,7 +123,7 @@ class OAuth2PasswordOrRefreshTokenRequestParams:
             ),
         ] = None,
         refresh_token: Annotated[
-            Union[str, None],
+            str | None,
             Form(),
             Doc(
                 """

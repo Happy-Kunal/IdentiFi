@@ -1,4 +1,4 @@
-cassandra-driver
+# cassandra-driver # as of now, install from source for python 3.12 or greater
 
 pydantic[email]
 pydantic-settings

@@ -1,10 +1,10 @@
-from typing import Union
+from typing import Annotated
+from typing_extensions import Doc
 from uuid import UUID
 
 from fastapi import Form, Query
 from pydantic import HttpUrl
 
-from typing_extensions import Annotated, Doc
 
 
 class OAuth2AuthorizationCodeRequestQuery:
@@ -84,7 +84,7 @@ class OAuth2AuthorizationCodeRequestQuery:
             ),
         ] = "openid",
         state: Annotated[
-            Union[str, None],
+            str | None,
             Query(),
             Doc(
                 """
@@ -114,7 +114,7 @@ class OAuth2AuthorizationCodeRequestForm(OAuth2AuthorizationCodeRequestQuery):
         client_id:    Annotated[UUID, Form()],
         redirect_uri: Annotated[HttpUrl, Form()],
         scope:        Annotated[str, Form()] = "openid",
-        state:        Annotated[Union[str, None], Form()] = None
+        state:        Annotated[str | None, Form()] = None
     ):
         super().__init__(
             grant_type=grant_type,

@@ -1,4 +1,4 @@
-from typing_extensions import Annotated
+from typing import Annotated
 
 from fastapi import APIRouter
 from fastapi import Security

@@ -1,5 +1,4 @@
 from uuid import uuid4, UUID
-from typing import Set, List
 
 from src.config import cfg
 from src.models import PrincipalUserModel, ServiceProviderModel
@@ -80,7 +79,7 @@ class CRUDOps:
         )
     
     @staticmethod
-    def get_scopes_granted_by_user_to_client(user_id, user_client_id, client_id) -> Set[OIDCScopes]:
+    def get_scopes_granted_by_user_to_client(user_id, user_client_id, client_id) -> set[OIDCScopes]:
         return set([scope.value for scope in OIDCScopes.__members__.values()])
     
     @staticmethod
@@ -120,15 +119,15 @@ class CRUDOps:
         return draft_worker
     
     @staticmethod
-    def get_users_in_principal_user_org(org_id: UUID, limit: int = 25, offset: int = 0) -> List[PrincipalUserInDBSchema]:
+    def get_users_in_principal_user_org(org_id: UUID, limit: int = 25, offset: int = 0) -> list[PrincipalUserInDBSchema]:
         return []
     
     @staticmethod
-    def get_principal_users_with_username_like(client_id: UUID, q: str, limit: int = 25, offset: int = 0) -> List[PrincipalUserInDBSchema]:
+    def get_principal_users_with_username_like(client_id: UUID, q: str, limit: int = 25, offset: int = 0) -> list[PrincipalUserInDBSchema]:
         return []
     
     @staticmethod
-    def get_principal_users_with_email_like(client_id: UUID, q: str, limit: int = 25, offset: int = 0) -> List[PrincipalUserInDBSchema]:
+    def get_principal_users_with_email_like(client_id: UUID, q: str, limit: int = 25, offset: int = 0) -> list[PrincipalUserInDBSchema]:
         return []
     
     @staticmethod

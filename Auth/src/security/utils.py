@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Annotated
 from uuid import UUID
 
 from fastapi import Depends, Response
@@ -6,7 +6,6 @@ from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import ValidationError
-from typing_extensions import Annotated
 
 from src.config import cfg
 from src.crud import CRUDOps
@@ -45,7 +44,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", scopes=scopes)
 #########################################################
 
 
-def authenticate_user(client_id: UUID, username: str, password: str, user_type: UserType) -> Union[PrincipalUserInDBSchema, ServiceProviderInDBSchema]:
+def authenticate_user(client_id: UUID, username: str, password: str, user_type: UserType) -> PrincipalUserInDBSchema | ServiceProviderInDBSchema:
     if (user_type == UserType.PRINCIPAL_USER):
         user = CRUDOps.get_prinicipal_user_by_username(client_id, username)
     else:
@@ -57,7 +56,7 @@ def authenticate_user(client_id: UUID, username: str, password: str, user_type: 
         raise credentials_exception
     
 
-def decode_jwt_token(token: str, algorithms: List[str] = [SAME_SITE_JWT_SIGNING_ALGORITHM], public_key: str = SAME_SITE_JWT_SIGNING_PUBLIC_KEY) -> Dict[str, Any]:
+def decode_jwt_token(token: str, algorithms: list[str] = [SAME_SITE_JWT_SIGNING_ALGORITHM], public_key: str = SAME_SITE_JWT_SIGNING_PUBLIC_KEY) -> dict[str, Any]:
     try:
         payload = jwt.decode(token, public_key, algorithms=algorithms)
         sub: str = payload.get("sub")
@@ -68,7 +67,7 @@ def decode_jwt_token(token: str, algorithms: List[str] = [SAME_SITE_JWT_SIGNING_
         raise invalid_token_exception
 
 
-def encode_to_jwt_token(data: Dict[str, Any], algorithm: str = SAME_SITE_JWT_SIGNING_ALGORITHM, private_key: str = SAME_SITE_JWT_SIGNING_PRIVATE_KEY) -> str:
+def encode_to_jwt_token(data: dict[str, Any], algorithm: str = SAME_SITE_JWT_SIGNING_ALGORITHM, private_key: str = SAME_SITE_JWT_SIGNING_PRIVATE_KEY) -> str:
     encoded_jwt = jwt.encode(data.copy(), private_key, algorithm=algorithm)
     return encoded_jwt
 
@@ -77,7 +76,7 @@ def get_password_hash(password: str) -> str:
     return password_context.hash(password)
 
 
-def is_allowed_to_grant_scopes_to_user(scopes: List[Scopes], user: Union[PrincipalUserInDBSchema, ServiceProviderInDBSchema]):
+def is_allowed_to_grant_scopes_to_user(scopes: list[Scopes], user: PrincipalUserInDBSchema | ServiceProviderInDBSchema):
     if (len(scopes) == 1):
         return (
             (Scopes.service_provider in scopes and user.user_type == UserType.SERVICE_PROVIDER)
@@ -90,7 +89,7 @@ def is_allowed_to_grant_scopes_to_user(scopes: List[Scopes], user: Union[Princip
         return False
 
 
-def process_scopes(scopes: List[Scopes]) -> ProcessedScopes:
+def process_scopes(scopes: list[Scopes]) -> ProcessedScopes:
     if (len(scopes) >= len(Scopes.__members__)):
         raise invalid_scopes_selection_exception
     

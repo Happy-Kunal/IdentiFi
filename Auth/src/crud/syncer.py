@@ -1,11 +1,11 @@
 import os
-from typing import List
 
 from cassandra.cluster import Cluster
 from cassandra.cqlengine import connection
 from cassandra.cqlengine.models import Model
 from cassandra.cqlengine.management import CQLENG_ALLOW_SCHEMA_MANAGEMENT
 from cassandra.cqlengine.management import sync_table, create_keyspace_simple
+from cassandra.io.libevreactor import LibevConnection
 
 from src.config import cfg
 from .syncer_exceptions import MoreThanSingleInstanceException, MoreThanOneSyncCallsException
@@ -28,13 +28,13 @@ class CassandraSyncer:
         
         CassandraSyncer.no_previous_instance = False
 
-    def sync(self, models: List[Model]):
+    def sync(self, models: list[Model]):
         if (not self.no_previous_sync_calls):
             raise MoreThanOneSyncCallsException("only 1 call to sync allowed")
 
         self.no_previous_sync_calls = False
 
-        cluster = Cluster(CASSANDRA_HOSTS, protocol_version=CASSANDRA_PROTOCOL_VERSION)
+        cluster = Cluster(CASSANDRA_HOSTS, protocol_version=CASSANDRA_PROTOCOL_VERSION, connection_class=LibevConnection)
         session = cluster.connect()
         connection.register_connection("CassandraSyncerConnection", session=session)
         

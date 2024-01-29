@@ -1,4 +1,3 @@
-from typing import List
 from uuid import UUID
 from datetime import datetime
 
@@ -12,7 +11,7 @@ from src.types.scopes import OIDCScopes
 class AuthorizationCodeData(BaseModel):
     sub: str
     redirect_uri: HttpUrl
-    scopes: List[OIDCScopes]
+    scopes: list[OIDCScopes]
     client_id: UUID
     exp: datetime
 

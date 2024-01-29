@@ -1,8 +1,7 @@
-from typing import Union
+from typing import Union, Annotated
 
 from fastapi import Depends, FastAPI
 from fastapi.staticfiles import StaticFiles
-from typing_extensions import Annotated
 
 from src.api_crud import router as api_crud_router
 from src.oidc import router as oidc_router

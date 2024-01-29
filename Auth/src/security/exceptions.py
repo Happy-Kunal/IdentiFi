@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import Callable
 
 from fastapi import status, HTTPException
 
@@ -23,7 +23,7 @@ invalid_scopes_selection_exception = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
-not_enough_permission_exception: Callable[[List[Scopes]], HTTPException] = lambda scopes: HTTPException(
+not_enough_permission_exception: Callable[[list[Scopes]], HTTPException] = lambda scopes: HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Not enough permissions",
     headers={

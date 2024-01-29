@@ -1,5 +1,5 @@
-from typing import Union
-from typing_extensions import Annotated, Doc
+from typing import Annotated
+from typing_extensions import Doc
 
 from fastapi import Form
 from pydantic import EmailStr
@@ -22,7 +22,7 @@ class PrincipalUserAdminRegistrationForm:
         ],
         username: Annotated[
             str,
-            Form(pattern="^\S+$", min_length=6, max_length=255),
+            Form(pattern=r"^\S+$", min_length=6, max_length=255),
             Doc(
                 """
                 username of admin [can't contain whitspace chars].
@@ -32,7 +32,7 @@ class PrincipalUserAdminRegistrationForm:
             )
         ],
         preferred_name: Annotated[
-            Union[str, None],
+            str | None,
             Form(),
             Doc(
                 """
@@ -56,7 +56,7 @@ class PrincipalUserAdminRegistrationForm:
         ],
         org_identifier: Annotated[
             str,
-            Form(pattern="^\S+$", min_length=6, max_length=255),
+            Form(pattern=r"^\S+$", min_length=6, max_length=255),
             Doc(
                 """
                 org_identifier is used for uniquely identify the
@@ -70,7 +70,7 @@ class PrincipalUserAdminRegistrationForm:
             )
         ],
         org_name: Annotated[
-            Union[str, None],
+            str | None,
             Form(min_length=6, max_length=255),
             Doc(
                 """
@@ -104,8 +104,8 @@ class PrincipalUserWorkerDraftForm:
             )
         ],
         username: Annotated[
-            Union[str, None],
-            Form(pattern="^\S+$", min_length=6, max_length=255),
+            str | None,
+            Form(pattern=r"^\S+$", min_length=6, max_length=255),
             Doc(
                 """
                 username of user (Principal User Worker) [can't contain whitspace chars].
@@ -115,7 +115,7 @@ class PrincipalUserWorkerDraftForm:
             )
         ] = None,
         password: Annotated[
-            Union[str, None],
+            str | None,
             Form(min_length=6, max_length=255),
             Doc(
                 """
@@ -148,7 +148,7 @@ class ServiceProviderRegistrationForm:
         ],
         username: Annotated[
             str,
-            Form(pattern="^\S+$", min_length=6, max_length=255),
+            Form(pattern=r"^\S+$", min_length=6, max_length=255),
             Doc(
                 """
                 username of service provider [can't contain whitspace chars].
@@ -158,7 +158,7 @@ class ServiceProviderRegistrationForm:
             )
         ],
         org_name: Annotated[
-            Union[str, None],
+            str | None,
             Form(min_length=6, max_length=255),
             Doc(
                 """

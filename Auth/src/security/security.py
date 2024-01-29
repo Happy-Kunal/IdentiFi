@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta, timezone
-from typing import List
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Form, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
-from typing_extensions import Annotated
 
 from src.config import cfg
 from src.crud import CRUDOps
@@ -30,7 +29,7 @@ router = APIRouter(prefix="/auth")
 
 
 
-async def access_token_using_password_grant(username: str, password: str, scopes: List[str], client_id: str) -> TokenResponse:
+async def access_token_using_password_grant(username: str, password: str, scopes: list[str], client_id: str) -> TokenResponse:
     processed_scopes: ProcessedScopes = process_scopes(scopes)
     
     try:
