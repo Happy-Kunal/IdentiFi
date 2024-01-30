@@ -13,7 +13,7 @@ function login() {
   console.log(postData.toString());
 
   // URL to which the POST request will be sent
-  const apiUrl = 'http://127.0.0.1:8000/auth/passwordflow/token';
+  const apiUrl = 'http://api.localhost/auth/passwordflow/token';
 
   // Options for the fetch request
   const requestOptions = {
