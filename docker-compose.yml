@@ -1,4 +1,7 @@
-version: "3.3"
+version: "3.8"
+
+include:
+  - onekey/compose.yaml
 
 
 services:
@@ -77,7 +80,7 @@ services:
         - traefik.http.routers.${PROJECT_NAME?Variable not set}-proxy-http.middlewares=${PROJECT_NAME?Variable not set}-www-redirect,${PROJECT_NAME?Variable not set}-https-redirect
 
 
-  web:
+  api:
     build: ./auth
     networks:
       - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
@@ -119,12 +122,22 @@ services:
       - LOGIN_ENDPOINT=${LOGIN_ENDPOINT}
       - MAX_SECRET_SIZE_IN_BYTES=${MAX_SECRET_SIZE_IN_BYTES}
 
-    deploy:
-      labels:
-        - traefik.enable=true
-        - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
-        - traefik.http.routers.${PROJECT_NAME?Variable not set}-backend-http.rule=Host(`api.localhost`) || PathPrefix(`/`) || PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/redoc`)
-        - traefik.http.services.${PROJECT_NAME?Variable not set}-backend.loadbalancer.server.port=8000
+    labels:
+      - traefik.enable=true
+      - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
+      - traefik.http.routers.${PROJECT_NAME?Variable not set}-backend-http.rule=Host(`api.localhost`) || PathPrefix(`/openapi.json`) || PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/redoc`)
+      - traefik.http.services.${PROJECT_NAME?Variable not set}-backend.loadbalancer.server.port=8000
+
+  frontend:
+    build: ./onekey
+    networks:
+      - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
+    
+    labels:
+      - traefik.enable=true
+      - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
+      - traefik.http.routers.${PROJECT_NAME?Variable not set}-frontend-http.rule=PathPrefix(`/`)
+      - traefik.http.services.${PROJECT_NAME?Variable not set}-frontend.loadbalancer.server.port=3000
 
 
 networks:
