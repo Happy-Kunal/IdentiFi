@@ -1,7 +1,7 @@
 from uuid import UUID
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic import field_serializer
 from pydantic import EmailStr, HttpUrl
 
@@ -46,19 +46,25 @@ class RefreshTokenData(AccessTokenData):
 
 class OIDCCommons(BaseModel):
     aud: UUID
-    fid: UUID
+    fid: str = Field(alias="org_identifier", min_length=6, max_length=255)
 
     @field_serializer("aud")
     def serialize_aud(self, aud: UUID, _info):
         return str(aud)
 
-    @field_serializer("fid")
-    def serialize_fid(self, fid: UUID, _info):
-        return str(fid)
 
-
-class OIDCAccessTokenData(TokenDataBase, OIDCCommons):
+class OIDCAccessTokenData(OIDCCommons):
+    sub: str
+    iss: HttpUrl
+    exp: datetime
+    
     scopes: list[OIDCScopes]
+    
+    
+    @field_serializer("iss")
+    def serialize_iss(self, iss, _info):
+        return str(iss)
+
 
 
 class OIDCRefreshTokenData(OIDCAccessTokenData):
@@ -79,7 +85,7 @@ class OIDCIDTokenData(OIDCCommons):
     name: str | None = None
     preferred_username: str | None = None
 
-    user_type: UserType = UserType.OIDC_CLIENT
+    #user_type: UserType = UserType.OIDC_CLIENT
 
 
     @field_serializer("iss")

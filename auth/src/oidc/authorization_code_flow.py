@@ -10,7 +10,6 @@ from fastapi import Depends
 from fastapi import HTTPException, status
 from fastapi import Request, Response
 from fastapi.responses import RedirectResponse
-from fastapi.security import OAuth2AuthorizationCodeBearer
 from jose import jwe
 from jose.exceptions import JWEError
 from pydantic import HttpUrl
@@ -21,12 +20,11 @@ from src.crud import CRUDOps
 from src.schemas import (AccessTokenData, AuthorizationCodeData,
                          OIDCAccessTokenData, OIDCIDTokenData,
                          OIDCRefreshTokenData, OIDCTokenResponse,
-                         PrincipalUserInDBSchema)
+                         UserInDBSchema)
+
 from src.security import decode_jwt_token as decode_jwt_token_same_site
-from src.security import encode_to_jwt_token as encode_to_jwt_token_same_site
-from src.security import not_enough_permission_exception
+from src import commons
 from src.security import oauth2_scheme as user_jwt_access_token_getter_async
-from src.types import UserType
 from src.types.scopes import OIDCScopes
 
 from .authorization_code_request_params import (
@@ -61,36 +59,25 @@ scopes = {
 }
 
 
-oauth2_authorization_code_scheme = OAuth2AuthorizationCodeBearer(
-    authorizationUrl="/oauth2/authorize",
-    tokenUrl="/oauth2/token",
-    refreshUrl="/oauth2/refresh",
-    scopes=scopes
-)
-
-
 invalid_client_id_exception = HTTPException(
     status_code=status.HTTP_406_NOT_ACCEPTABLE,
     detail="invalid client_id: no such client exists with given client_id"
 )
 
 
-VALID_OIDC_SCOPES = {scope.value for scope in OIDCScopes.__members__.values()}
-
-
 router = APIRouter(prefix="/oauth2")
 
 
-def encode_to_jwt_token_oidc(data: dict[str, Any]) -> str:
-    return encode_to_jwt_token_same_site(
+def encode_to_jwt_token(data: dict[str, Any]) -> str:
+    return commons.encode_to_jwt_token(
         data=data,
         algorithm=OIDC_JWT_SIGNING_ALGORITHM,
         private_key=OIDC_JWT_SIGNING_PRIVATE_KEY
     )
 
 
-def decode_jwt_token_oidc(token: str) -> dict[str, Any]:
-    return decode_jwt_token_same_site(
+def decode_jwt_token(token: str) -> dict[str, Any]:
+    return commons.decode_jwt_token(
         token=token,
         algorithms=[OIDC_JWT_SIGNING_ALGORITHM],
         public_key=OIDC_JWT_SIGNING_PUBLIC_KEY
@@ -115,19 +102,19 @@ def decrypt_string(data: str):
         )
 
 
-async def get_logged_in_user(access_token: str) -> PrincipalUserInDBSchema | None:
+async def get_logged_in_user(access_token: str) -> UserInDBSchema | None:
     token_data = AccessTokenData(**decode_jwt_token_same_site(access_token))
-    client_id, _, username = token_data.sub.partition(":")
-    if (token_data.user_type == UserType.PRINCIPAL_USER):
-        user = CRUDOps.get_prinicipal_user_by_username(client_id, username)
+    if (token_data.user_type.is_principal_user()):
+        org_identifier, user_id = commons.decode_sub_for_principal_user(sub=token_data.sub)
+        user = CRUDOps.get_user_by_user_id(org_identifier=org_identifier, user_id=user_id)
+        return user
     else:
-        raise not_enough_permission_exception()
+        return None
     
-    return user
 
 
 
-async def display_login_screen(redirect_uri: HttpUrl):
+def display_login_screen(redirect_uri: HttpUrl):
     quoted_redirect_uri = urllib.parse.quote(redirect_uri)
     return RedirectResponse(
         url=f"{LOGIN_ENDPOINT}?redirect_uri={quoted_redirect_uri}",
@@ -135,7 +122,7 @@ async def display_login_screen(redirect_uri: HttpUrl):
     )
 
 
-async def authenticate_client_async(client_id: UUID, client_secret: str | None = None):
+async def is_valid_client_async(client_id: UUID, client_secret: str | None = None):
     client = CRUDOps.get_service_provider_by_client_id(client_id)
     if (client):
         return client_secret is None or compare_digest(client.client_secret, client_secret)
@@ -143,10 +130,10 @@ async def authenticate_client_async(client_id: UUID, client_secret: str | None =
     return False
 
 
-async def is_consent_form_required(user: PrincipalUserInDBSchema, client_id: UUID, scopes: list[OIDCScopes]):
+async def is_consent_form_required(user: UserInDBSchema, client_id: UUID, scopes: list[OIDCScopes]):
     granted_scopes: set[OIDCScopes] = CRUDOps.get_scopes_granted_by_user_to_client(
+                                            org_identifier=user.org_identifier,
                                             user_id=user.user_id,
-                                            user_client_id=user.client_id,
                                             client_id=client_id
                                         )
     
@@ -163,13 +150,13 @@ async def send_consent_form(redirect_uri: HttpUrl):
 
 
 async def generate_authorization_code(
-    user: PrincipalUserInDBSchema,
+    user: UserInDBSchema,
     client_id: UUID,
     redirect_uri: HttpUrl,
     scopes: list[OIDCScopes]
 ) -> str:
     authorization_code_data = AuthorizationCodeData(
-        sub=f"{user.client_id}:{user.username}",
+        sub=commons.encode_sub_for_principal_user(org_identifier=user.org_identifier, user_id=user.user_id),
         redirect_uri=redirect_uri,
         scopes=scopes,
         client_id=client_id,
@@ -177,7 +164,7 @@ async def generate_authorization_code(
     )
 
     authorization_code = encrypt_string(
-        encode_to_jwt_token_oidc(
+        encode_to_jwt_token(
             authorization_code_data.model_dump()
         )
     )
@@ -188,12 +175,11 @@ async def generate_authorization_code(
 async def create_tokens_from_authcode_data(authcode_data: AuthorizationCodeData) -> OIDCTokenResponse:
     common = {
         "aud": authcode_data.client_id, # client_id of client [service-provider]
-        "fid": authcode_data.sub.partition(":")[0], # sub := `<user.client_id: UUID>:<user.username: str>`
         "iss": ISSUER,
         "sub": authcode_data.sub,
         
+        "org_identifier": commons.decode_sub_for_principal_user(sub=authcode_data.sub)[0],
         "scopes": authcode_data.scopes,
-        "user_type": UserType.OIDC_CLIENT,
     }
     
     access_token = OIDCAccessTokenData(
@@ -213,21 +199,21 @@ async def create_tokens_from_authcode_data(authcode_data: AuthorizationCodeData)
     )
 
     if (len(authcode_data.scopes) > 1):
-        client_id, _, username = authcode_data.sub.partition(":")
-        user = CRUDOps.get_prinicipal_user_by_username(client_id=client_id, username=username)
+        org_identifier, user_id = commons.decode_sub_for_principal_user(authcode_data.sub)
+        user = CRUDOps.get_user_by_user_id(org_identifier=org_identifier, user_id=user_id)
 
         if (OIDCScopes.profile in authcode_data.scopes):
-            id_token.name = user.preferred_name # TODO: make variable naming scheme consistent with OIDC claims for id token
-            id_token.preferred_username = user.username # TODO: make variable naming scheme consistent with OIDC claims for id token
+            id_token.name = user.name
+            id_token.preferred_username = user.username
         
         if (OIDCScopes.email in authcode_data.scopes):
             id_token.email = user.email
 
     return OIDCTokenResponse(
         token_type="Bearer",
-        access_token=encode_to_jwt_token_oidc(access_token.model_dump()),
-        refresh_token=encode_to_jwt_token_oidc(refresh_token.model_dump()),
-        id_token=encode_to_jwt_token_oidc(id_token.model_dump(exclude_none=True)),
+        access_token=encode_to_jwt_token(access_token.model_dump()),
+        refresh_token=encode_to_jwt_token(refresh_token.model_dump()),
+        id_token=encode_to_jwt_token(id_token.model_dump(exclude_none=True)),
         expires_in=ACCESS_TOKEN_EXPIRE_TIME,
     )
 
@@ -239,20 +225,18 @@ async def authorize(
     request: Request,
     query_data: Annotated[OAuth2AuthorizationCodeRequestQuery, Depends()],
 ):
-    try:
-        access_token = await user_jwt_access_token_getter_async(request=request)
-    except HTTPException:
-        access_token = request.cookies.get("access_token")
-        if (not access_token):
-            return await display_login_screen(redirect_uri=request.url._url)
+    access_token = await user_jwt_access_token_getter_async(request=request)
+    
+    if (not access_token):
+        return display_login_screen(redirect_uri=request.url._url)
     
     user = await get_logged_in_user(access_token=access_token)
-    valid_requested_scopes = query_data.scopes.intersection(VALID_OIDC_SCOPES)
+    valid_requested_scopes = query_data.scopes.intersection(OIDCScopes)
 
 
     if (not user):
-        return await display_login_screen(redirect_uri=request.url._url)
-    elif (not await authenticate_client_async(client_id=query_data.client_id)):
+        return display_login_screen(redirect_uri=request.url._url)
+    elif (not await is_valid_client_async(client_id=query_data.client_id)):
         raise invalid_client_id_exception
     elif (await is_consent_form_required(user=user, client_id=query_data.client_id, scopes=valid_requested_scopes)):
         return await send_consent_form(redirect_uri=request.url._url)
@@ -287,12 +271,12 @@ async def token_from_authorization_code(
     params: AuthorizationCodeTokenRequestParams
 ):
     authcode_data = AuthorizationCodeData(
-        **decode_jwt_token_oidc(
+        **decode_jwt_token(
             token=decrypt_string(params.code)
         )
     )
 
-    if (not await authenticate_client_async(client_id=params.client_id, client_secret=params.client_secret)):
+    if (not await is_valid_client_async(client_id=params.client_id, client_secret=params.client_secret)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="invalid client credentials"

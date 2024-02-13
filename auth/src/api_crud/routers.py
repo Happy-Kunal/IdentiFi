@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from .credentials import router as credentials_router
-from .pua_users   import router as pua_router
+from .users       import router as pua_router
 from .register    import router as registration_router
 from .unregister  import router as unregistration_router
 

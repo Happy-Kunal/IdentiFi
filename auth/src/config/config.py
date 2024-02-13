@@ -17,6 +17,7 @@ class Cassandra(BaseModel):
 
 class Cookies(BaseModel):
     https_only: bool = True
+    domain: str | None = None
 
 
 class DBSchemas(BaseModel):

@@ -1,29 +1,30 @@
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+from pydantic import ConfigDict
 from pydantic import field_serializer
 from pydantic import EmailStr
 
-from src.types import ServiceProviderTypes
+from src.types import UserType
 
 
 class ServiceProviderBaseSchema(BaseModel):
-    client_id: UUID
-    email: EmailStr
-    username: str
-    org_name: str
-    user_type: ServiceProviderTypes = Field(default=ServiceProviderTypes.SERVICE_PROVIDER)
+    model_config = ConfigDict(from_attributes=True)
 
-    @field_serializer("client_id")
-    def serialize_client_id(self, client_id: UUID, _info):
-        return str(client_id)
+    username: str = Field(min_length=6, max_length=255, pattern=r"^\S+$")
+    email: EmailStr
+
+    @property
+    def user_type(self) -> UserType:
+        return UserType.SERVICE_PROVIDER
 
 class ServiceProviderInputSchema(ServiceProviderBaseSchema):
     password: str
 
-class ServiceProviderInDBSchema(ServiceProviderBaseSchema):
-    client_secret: str
-    hashed_password: str
-
 class ServiceProviderOutputSchema(ServiceProviderBaseSchema):
     pass
+
+class ServiceProviderInDBSchema(ServiceProviderOutputSchema):
+    client_id: UUID
+    client_secret: str
+    hashed_password: str

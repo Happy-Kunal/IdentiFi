@@ -1,9 +1,10 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from typing_extensions import Doc
 
 from fastapi import Form
 from pydantic import EmailStr
 
+from src.types import UserType
 
 class PrincipalUserAdminRegistrationForm:
     def __init__(
@@ -45,7 +46,7 @@ class PrincipalUserAdminRegistrationForm:
         ] = None,
         password: Annotated[
             str,
-            Form(min_length=6, max_length=255),
+            Form(min_length=8, max_length=255),
             Doc(
                 """
                 password of admin.
@@ -68,29 +69,16 @@ class PrincipalUserAdminRegistrationForm:
                                 value that does not contain whitespace.
                 """
             )
-        ],
-        org_name: Annotated[
-            str | None,
-            Form(min_length=6, max_length=255),
-            Doc(
-                """
-                Name Of Organization of admin. if not provided it
-                will take same value as org_identifier of admin.
-
-                for example: "Foo Bar Inc."
-                """
-            )
-        ] = None
+        ]
     ):
         self.email = email
         self.username = username
         self.preferred_name = preferred_name or username
         self.password = password
         self.org_identifier = org_identifier
-        self.org_name = org_name or org_identifier
 
 
-class PrincipalUserWorkerDraftForm:
+class PrincipalUserDraftForm:
     def __init__(
         self,
         *,
@@ -99,36 +87,46 @@ class PrincipalUserWorkerDraftForm:
             Form(),
             Doc(
                 """
-                email of the user (Principal User Worker)
+                email of the user (Principal User)
                 """
             )
         ],
         username: Annotated[
-            str | None,
+            str,
             Form(pattern=r"^\S+$", min_length=6, max_length=255),
             Doc(
                 """
-                username of user (Principal User Worker) [can't contain whitspace chars].
+                username of user (Principal User) [can't contain whitspace chars].
 
                 for example: john.doe
                 """
             )
-        ] = None,
+        ],
         password: Annotated[
-            str | None,
-            Form(min_length=6, max_length=255),
+            str,
+            Form(min_length=8, max_length=255),
             Doc(
                 """
-                password of user (Principal User Worker).
+                password of user (Principal User).
 
                 for example: abc123!@#, p@ssword, p@55w0rd
                 """
             )
-        ] = None
+        ],
+        user_type: Annotated[
+            Literal[UserType.ADMIN_USER, UserType.WORKER_USER],
+            Form(),
+            Doc(
+                """
+                type of user: admin or worker
+                """
+            )
+        ]
     ):
         self.email = email
         self.username = username
         self.password = password
+        self.user_type = user_type
 
 
 class ServiceProviderRegistrationForm:
@@ -157,22 +155,9 @@ class ServiceProviderRegistrationForm:
                 """
             )
         ],
-        org_name: Annotated[
-            str | None,
-            Form(min_length=6, max_length=255),
-            Doc(
-                """
-                Name Of Organization of Service Provider. if not
-                provided it will take same value as username of
-                Service Provider.
-
-                for example: "Jira Inc."
-                """
-            )
-        ] = None,
         password: Annotated[
             str,
-            Form(min_length=6, max_length=255),
+            Form(min_length=8, max_length=255),
             Doc(
                 """
                 password of admin.
@@ -184,6 +169,5 @@ class ServiceProviderRegistrationForm:
     ):
         self.email = email
         self.username = username
-        self.org_name = org_name or username
         self.password = password
 

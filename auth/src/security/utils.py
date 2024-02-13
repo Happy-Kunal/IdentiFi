@@ -1,27 +1,26 @@
 from typing import Any, Annotated
-from uuid import UUID
 
 from fastapi import Depends, Response
-from fastapi.security import OAuth2PasswordBearer, SecurityScopes
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from pydantic import ValidationError
+from fastapi.security import SecurityScopes
+
 
 from src.config import cfg
 from src.crud import CRUDOps
-from src.schemas import (PrincipalUserInDBSchema, ProcessedScopes,
+from src.schemas import (UserInDBSchema,
                          ServiceProviderInDBSchema)
 from src.schemas.tokens import AccessTokenData, TokenResponse
-from src.types import PrincipalUserTypes, UserType
+from src.types import UserType
 from src.types.scopes import Scopes
 
-from .exceptions import (credentials_exception,
-                         invalid_scopes_selection_exception,
-                         invalid_token_exception,
-                         not_enough_permission_exception)
+from src import commons
+from src.commons.exceptions import (CredentialsException,
+                         InvalidScopesSelectionException,
+                         InvalidTokenException,
+                         NotEnoughPermissionException)
 
 
 HTTPS_ONLY_COOKIE = cfg.cookies.https_only
+COOKIE_DOMAIN = cfg.cookies.domain
 REFRESH_TOKEN_EXPIRE_TIME = cfg.same_site.exp_time.refresh_token
 SAME_SITE_JWT_SIGNING_ALGORITHM = cfg.same_site.jwt.signing_algorithm
 SAME_SITE_JWT_SIGNING_PRIVATE_KEY = cfg.same_site.jwt.keys.private_key
@@ -35,8 +34,7 @@ scopes = {
 }
 
 
-password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", scopes=scopes)
+oauth2_scheme = commons.OAuth2PasswordBearerExtended(tokenUrl="/auth/token", scopes=scopes)
 
 
 #########################################################
@@ -44,79 +42,76 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", scopes=scopes)
 #########################################################
 
 
-def authenticate_user(client_id: UUID, username: str, password: str, user_type: UserType) -> PrincipalUserInDBSchema | ServiceProviderInDBSchema:
-    if (user_type == UserType.PRINCIPAL_USER):
-        user = CRUDOps.get_prinicipal_user_by_username(client_id, username)
-    else:
-        user = CRUDOps.get_service_provider_by_username(client_id, username)
+def authenticate_user(org_identifier: str, username: str, password: str) -> UserInDBSchema:
+    user = CRUDOps.get_user_by_username(org_identifier=org_identifier, username=username)
 
-    if (user and verify_password(password, user.hashed_password)):
+    if (user and commons.verify_password(password, user.hashed_password)):
         return user
     else:
-        raise credentials_exception
-    
-
-def decode_jwt_token(token: str, algorithms: list[str] = [SAME_SITE_JWT_SIGNING_ALGORITHM], public_key: str = SAME_SITE_JWT_SIGNING_PUBLIC_KEY) -> dict[str, Any]:
-    try:
-        payload = jwt.decode(token, public_key, algorithms=algorithms)
-        sub: str = payload.get("sub")
-        if sub is None:
-            raise invalid_token_exception
-        return payload
-    except (JWTError, ValidationError):
-        raise invalid_token_exception
+        raise CredentialsException
 
 
-def encode_to_jwt_token(data: dict[str, Any], algorithm: str = SAME_SITE_JWT_SIGNING_ALGORITHM, private_key: str = SAME_SITE_JWT_SIGNING_PRIVATE_KEY) -> str:
-    encoded_jwt = jwt.encode(data.copy(), private_key, algorithm=algorithm)
-    return encoded_jwt
+def authenticate_service_provider(username: str, password: str) -> ServiceProviderInDBSchema:
+    service_provider = CRUDOps.get_service_provider_by_username(username)
+
+    if (service_provider and commons.verify_password(password, service_provider.hashed_password)):
+        return service_provider
+    else:
+        raise CredentialsException
 
 
-def get_password_hash(password: str) -> str:
-    return password_context.hash(password)
+def decode_jwt_token(token: str) -> dict[str, Any]:
+    return commons.decode_jwt_token(
+        token=token,
+        algorithms=[SAME_SITE_JWT_SIGNING_ALGORITHM],
+        public_key=SAME_SITE_JWT_SIGNING_PUBLIC_KEY
+    )
 
 
-def is_allowed_to_grant_scopes_to_user(scopes: list[Scopes], user: PrincipalUserInDBSchema | ServiceProviderInDBSchema):
+def encode_to_jwt_token(data: dict[str, Any]) -> str:
+    return commons.encode_to_jwt_token(
+        data=data,
+        algorithm=SAME_SITE_JWT_SIGNING_ALGORITHM,
+        private_key=SAME_SITE_JWT_SIGNING_PRIVATE_KEY
+    )
+
+
+def is_allowed_to_grant_scopes_to_user_type(scopes: list[Scopes], user_type: UserType):
     if (len(scopes) == 1):
         return (
-            (Scopes.service_provider in scopes and user.user_type == UserType.SERVICE_PROVIDER)
-            or (Scopes.worker        in scopes and user.user_type == UserType.PRINCIPAL_USER)
+            (Scopes.service_provider in scopes and user_type is UserType.SERVICE_PROVIDER)
+            or (Scopes.worker        in scopes and user_type is UserType.WORKER_USER)
         )
-            
+    
     elif (len(scopes) == 2 and Scopes.admin in scopes and Scopes.worker in scopes):
-        return (user.user_type == UserType.PRINCIPAL_USER and user.user_type == PrincipalUserTypes.PRINCIPAL_USER_ADMIN)
+        return (user_type is UserType.ADMIN_USER)
     else:
         return False
 
 
-def process_scopes(scopes: list[Scopes]) -> ProcessedScopes:
+def process_scopes(scopes: list[Scopes]) -> list[Scopes]:
+    """
+    checks if combination of scopes in correct or can be correcected
+    without removal of any scope for given scopes and return the
+    list of corrected scopes
+    """
     if (len(scopes) >= len(Scopes.__members__)):
-        raise invalid_scopes_selection_exception
-    
-    valid_scopes = Scopes.__members__.values()
-    for scope in scopes:
-        if (scope not in valid_scopes):
-            raise invalid_scopes_selection_exception
+        raise InvalidScopesSelectionException
 
     if (len(scopes) == 1):
-        if (Scopes.service_provider in scopes):
-            return ProcessedScopes(user_type=UserType.SERVICE_PROVIDER, scopes=[Scopes.service_provider])
-        elif (Scopes.worker in scopes):
-            return ProcessedScopes(user_type=UserType.PRINCIPAL_USER, scopes=[Scopes.worker])
-        else:
-            raise invalid_scopes_selection_exception
-
+        return [Scopes.admin, Scopes.worker] if (Scopes.admin in scopes) else scopes
     elif (len(scopes) == 2 and Scopes.worker in scopes and Scopes.admin in scopes):
-        return ProcessedScopes(user_type=UserType.PRINCIPAL_USER, scopes=[Scopes.worker, Scopes.admin])
+        return scopes
     else:
-        raise invalid_scopes_selection_exception
+        raise InvalidScopesSelectionException
 
 
-def set_tokens_in_cookie(response: Response, token: TokenResponse, cookie_path_for_refresh_token: str = "/"):
+def set_tokens_in_cookie(response: Response, token: TokenResponse, cookie_path_for_refresh_token: str = "/", domain: str | None = COOKIE_DOMAIN):
     response.set_cookie(
         key="access_token",
         value=token.access_token,
         expires=token.expires_in,
+        domain=domain,
         secure=HTTPS_ONLY_COOKIE,
         httponly=True,
         samesite="strict"
@@ -127,17 +122,11 @@ def set_tokens_in_cookie(response: Response, token: TokenResponse, cookie_path_f
         value=token.refresh_token,
         expires=REFRESH_TOKEN_EXPIRE_TIME,
         path=cookie_path_for_refresh_token,
+        domain=domain,
         secure=HTTPS_ONLY_COOKIE,
         httponly=True,
         samesite="strict"
     )
-
-
-def verify_password(plain_password: str, hashed_password: str):
-    return password_context.verify(plain_password, hashed_password)
-
-
-
 
 #########################################################
 #             NonBlocking Utility Functions             #
@@ -145,19 +134,23 @@ def verify_password(plain_password: str, hashed_password: str):
 
 
 async def get_current_user(security_scopes: SecurityScopes, token: Annotated[str, Depends(oauth2_scheme)]):
+    """
+    here by user stands for all members of UserType Enum
+    """
     token_data = AccessTokenData(**decode_jwt_token(token))
 
-    if (token_data.user_type == UserType.PRINCIPAL_USER):
-        user = CRUDOps.get_prinicipal_user_by_username(token_data.client_id, token_data.sub)
+    if (token_data.user_type.is_principal_user()):
+        org_identifier, user_id = commons.decode_sub_for_principal_user(sub=token_data.sub)
+        user = CRUDOps.get_user_by_user_id(org_identifier=org_identifier, user_id=user_id)
     else:
-        user = CRUDOps.get_service_provider_by_username(token_data.client_id, token_data.sub)
+        user = CRUDOps.get_service_provider_by_username(token_data.sub)
 
     if user is None:
-        raise invalid_token_exception
+        raise InvalidTokenException
 
     for scope in security_scopes.scopes:
         if scope not in token_data.scopes:
-            raise not_enough_permission_exception(scopes=security_scopes.scopes)
+            raise NotEnoughPermissionException(scopes=security_scopes.scopes)
 
 
     return user

@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+
+  cassandra:
+    build:
+      context: .
+      dockerfile: cassandra-with-sasi.Dockerfile
+    networks:
+      - identifi_internal_network
+    container_name: db
+    ports:
+      - target: 9042
+        published: 9042
+        protocol: tcp
+        mode: host
+    expose:
+      - "7000"
+    logging:
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+networks:
+  identifi_internal_network:
+    external: true
+

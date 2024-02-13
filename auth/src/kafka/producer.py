@@ -6,4 +6,5 @@ class KafkaProducer:
     
     @classmethod
     async def publish(cls, event: EventInterface):
-        raise NotImplementedError
+        print("fake produced to kafka topic")
+        #raise NotImplementedError

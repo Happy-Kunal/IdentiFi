@@ -3,6 +3,7 @@
 
 
 from abc import ABC, abstractmethod
+from typing import override
 
 
 
@@ -20,19 +21,22 @@ class EventInterface(ABC):
         raise NotImplementedError
 
 
-class PrincipalUserWorkerDraftEvent(EventInterface):
+class PrincipalUserDraftEvent(EventInterface):
     """
     Dummy Implementation as of now.
     """
 
     def __init__(self, *args, **kwargs):
-        self.topic = "PrincipalUserWorkerDraftEvent"
+        self.topic = "PrincipalUserDraftEvent"
     
+    @override
     def get_topic(self) -> str:
         return self.topic
     
+    @override
     def get_value(self) -> str | bytes:
         return "fake value"
     
+    @override
     def get_key(self) -> str | bytes:
         return "fake key"

@@ -1,47 +1,33 @@
 from typing import Annotated
 
 from fastapi import APIRouter
-from fastapi import Security
 
 from src.crud import CRUDOps
-from src.schemas import PrincipalUserInDBSchema, ServiceProviderInDBSchema
-from src.security.utils import get_current_user
-from src.types.scopes import Scopes
 
-from .response import FIDResponse, ServiceProviderClientID, ClientSecretResetResponse
+from .response import ServiceProviderClientID, ClientSecretResetResponse
+from .utils import ServiceProviderType, PrincipalUserType
 
 
 router = APIRouter()
 
 
-AdminType = Annotated[
-    PrincipalUserInDBSchema,
-    Security(get_current_user, scopes=[Scopes.admin])
-]
-
-ServiceProviderType = Annotated[
-    ServiceProviderInDBSchema,
-    Security(get_current_user, scopes=[Scopes.service_provider])
-]
-
 #####################################################################
 #                principal-user-admin related methods               #
 #####################################################################
 
-@router.get("/principal-user-admin/credentials/get-fid", response_model=FIDResponse)
+@router.get("/{org_identifier}/fid")
 async def get_fid(
-    admin: AdminType
+    _user: PrincipalUserType,
+    org_identifier: str
 ):
-    return FIDResponse(fid=admin.client_id)
-
-
+    return org_identifier
 
 
 #####################################################################
 #                  service_provider related methods                 #
 #####################################################################
 
-@router.get("/service_provider/credentials/client-id", response_model=ServiceProviderClientID)
+@router.get("/service-providers/me/credentials/client-id", response_model=ServiceProviderClientID)
 async def get_client_id(
     service_provider: ServiceProviderType
 ):
@@ -52,4 +38,4 @@ async def get_client_id(
 async def reset_client_secret(
     service_provider: ServiceProviderType
 ):
-    return CRUDOps.reset_service_provider_secret(service_provider=service_provider)
+    return CRUDOps.reset_service_provider_secret(username=service_provider.username)
