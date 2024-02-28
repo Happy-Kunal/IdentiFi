@@ -84,6 +84,10 @@ services:
     
     # TODO: implement docker secrets or something similar instead of environment variables to enhance security
     environment:
+      - BACKEND_CORS__ORIGINS=${BACKEND_CORS__ORIGINS}
+      - BACKEND_CORS__ORIGINS_REGEX=${BACKEND_CORS__ORIGINS_REGEX}
+      - BACKEND_CORS__ALLOW_CREDENTIALS=${BACKEND_CORS__ALLOW_CREDENTIALS}
+
       - COOKIES__HTTPS_ONLY=${COOKIES__HTTPS_ONLY}
       - COOKIES__DOMAIN=${COOKIES__DOMAIN}
 

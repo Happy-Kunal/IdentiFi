@@ -3,7 +3,7 @@
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from pydantic import HttpUrl, PositiveInt
+from pydantic import HttpUrl, PositiveInt, AnyUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +18,14 @@ class Cassandra(BaseModel):
 class Cookies(BaseModel):
     https_only: bool = True
     domain: str | None = None
+
+
+
+class CORS(BaseModel):
+    origins: list[AnyUrl] = Field(default_factory=list)
+    origins_regex: str | None = None
+    allow_credentials: bool = False
+
 
 
 class DBSchemas(BaseModel):
@@ -90,6 +98,7 @@ class Config(BaseSettings):
 
 
     cookies: Cookies
+    cors: CORS = Field(alias="backend_cors")
     db: DB
     oidc: OIDC
     same_site: SameSite
@@ -97,3 +106,4 @@ class Config(BaseSettings):
     issuer: HttpUrl
     login_endpoint: str = "/login"
     client_secret_size: PositiveInt = Field(32, alias="max_secret_size_in_bytes") # (in bytes)
+    

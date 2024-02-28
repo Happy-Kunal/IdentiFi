@@ -11,6 +11,6 @@ echo "waiting for database to start accepting connections (20 sec approx.)..."
 sleep 20
 
 echo "starting all other containers..."
-podman compose up -d
+podman compose up -d --build
 
 echo "COMPLETE!"

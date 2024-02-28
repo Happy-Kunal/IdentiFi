@@ -30,6 +30,9 @@ services:
 
 
   api:
+    environment:
+      # to handle non https requests on localhost
+      - COOKIES__HTTPS_ONLY=False
     ports:
       - "8000:8000"
 
