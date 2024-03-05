@@ -1,23 +1,38 @@
-FROM python:3.12.1-alpine3.19
+# The builder image, used to build the virtual environment
+FROM python:3.12.2-bookworm AS builder
+
+RUN pip install poetry==1.8.1
+
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1
 
 WORKDIR /app
 
-# event loop for cassandra-driver
-RUN apk --no-cache add libev
+COPY pyproject.toml poetry.lock ./
+RUN touch README.md
 
-# installing cassandra-driver from source
-RUN apk --no-cache add build-base libffi-dev python3-dev libev-dev curl \
-    && curl -sL https://github.com/datastax/python-driver/archive/refs/tags/3.29.0.tar.gz | tar xz \
-    && pip install ./python-driver* \
-    && rm -rf ./python-driver* \    
-    && apk del build-base libffi-dev python3-dev libev-dev curl
+RUN apt-get update \
+    && apt-get install -y libev-dev \
+    && apt-get clean \
+    && poetry install --without dev --no-root --no-cache
 
-COPY requirements.txt .
 
-RUN pip --no-cache-dir install -r requirements.txt
+# The runtime image, used to just run the code provided its virtual environment
+FROM python:3.12.2-slim-bookworm AS runtime
 
-COPY . .
+ENV VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH" \
+    PORT=8000
 
-EXPOSE 8000
+RUN apt-get update \
+    && apt-get install -y libev4 \
+    && apt-get clean
+
+COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+
+COPY src ./src
+
+EXPOSE ${PORT}
 
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0"]

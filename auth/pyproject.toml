@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "auth"
+version = "0.9.0"
+description = "identifi auth service."
+authors = ["Kunal Sharma <happykunal@proton.me>"]
+license = "MIT"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.110.0"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+pydantic = {extras = ["email"], version = "^2.6.3"}
+pydantic-settings = "^2.2.1"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+python-multipart = "^0.0.9"
+uvicorn = {extras = ["standard"], version = "^0.27.1"}
+confluent-kafka = "^2.3.0"
+pydantic2avro = "^0.2.0"
+cassandra-driver = {url = "https://github.com/datastax/python-driver/archive/refs/tags/3.29.0.tar.gz"}
+requests = "^2.31.0"
+fastavro = "^1.9.4"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.8.0"
+pytest = "^8.0.2"
+pytest-cov = "^4.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
