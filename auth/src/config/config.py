@@ -1,9 +1,10 @@
 # https://docs.pydantic.dev/latest/concepts/pydantic_settings/
 
+from __future__ import annotations
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from pydantic import HttpUrl, PositiveInt, AnyUrl
+from pydantic import HttpUrl, PositiveInt, AnyUrl, Json
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,9 +38,19 @@ class DB(BaseModel):
     schemas: DBSchemas
 
 
+class Kafka(BaseModel):
+    topics: Topics
+    producer_config: Json
+    schema_registry_config: Json
+
+
 class SameSiteExpTime(BaseModel):
     access_token: PositiveInt = 30 * 60 # 30 min
     refresh_token: PositiveInt = 24 * 60 * 60 # 24 hours
+
+
+class Topics(BaseModel):
+    draft_user: str = Field(default="draft_user", pattern="^[A-Za-z_][A-Za-z_0-9]*$")
 
 
 class OIDCExpTime(SameSiteExpTime):
@@ -100,6 +111,7 @@ class Config(BaseSettings):
     cookies: Cookies
     cors: CORS = Field(alias="backend_cors")
     db: DB
+    kafka: Kafka
     oidc: OIDC
     same_site: SameSite
 

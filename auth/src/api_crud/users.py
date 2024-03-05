@@ -6,7 +6,7 @@ from fastapi import Depends
 from fastapi import HTTPException, status
 
 from src.crud import CRUDOps
-from src.kafka import KafkaProducer, PrincipalUserDraftEvent
+from src.events import KafkaProducer, UserDraftKafkaEventFactory
 from src.schemas import UserInputSchema, UserOutputSchema
 from src.types import UserType
 
@@ -90,7 +90,9 @@ async def create_user(
     response = CRUDOps.create_user_draft(draft_user=draft_user)
 
     # publishing event for other microservices like email-microservice
-    await KafkaProducer.publish(PrincipalUserDraftEvent(response)) 
+    # event publishing is internally handled on seprate thread so this will
+    # return immediately
+    KafkaProducer.publish(UserDraftKafkaEventFactory(response)) 
 
     return response
 

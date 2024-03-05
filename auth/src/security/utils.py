@@ -28,9 +28,9 @@ SAME_SITE_JWT_SIGNING_PUBLIC_KEY = cfg.same_site.jwt.keys.public_key
 
 
 scopes = {
-    Scopes.admin: "Allow all permissions related to admin of principal user",
-    Scopes.worker: "Allow all permissions related to worker of principal user",
-    Scopes.service_provider: "Allow all permissions related to admin of service provider"
+    Scopes.admin.value: "Allow all permissions related to admin of principal user",
+    Scopes.worker.value: "Allow all permissions related to worker of principal user",
+    Scopes.service_provider.value: "Allow all permissions related to admin of service provider"
 }
 
 

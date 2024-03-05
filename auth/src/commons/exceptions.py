@@ -28,7 +28,7 @@ class InvalidScopesSelectionException(HTTPException):
         )
 
 class NotEnoughPermissionException(HTTPException):
-    def __init__(self, scopes: list[Scopes] | None = None):
+    def __init__(self, scopes: list[str] | None = None):
         super().__init__(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not enough permissions",
