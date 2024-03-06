@@ -12,29 +12,7 @@ from src.commons import get_password_hash, make_secret
 
 from .models import ServiceProviderByClientID, ServiceProviderByUsername
 from .models.users import UserByUsername, UserByEmail, UserByUserID, UserDraft, AdminUserByEmail, WorkerUserByEmail, AdminUserByUsername, WorkerUserByUsername, AdminUserByUserID, WorkerUserByUserID, AdminUserDraft, WorkerUserDraft
-from .syncer import CassandraSyncer
 
-
-CASSANDRA_HOSTS = cfg.db.cassandra.hosts
-CASSANDRA_KEYSPACE = cfg.db.cassandra.keyspace
-CASSANDRA_PROTOCOL_VERSION = cfg.db.cassandra.protocol_version
-
-UPDATE_DB_SCHEMA = cfg.db.schemas.update
-
-models = [
-    ServiceProviderByClientID,
-    ServiceProviderByUsername,
-    UserByEmail,
-    UserByUserID,
-    UserByUsername,
-    UserDraft,
-]
-
-connection.setup(CASSANDRA_HOSTS, CASSANDRA_KEYSPACE, retry_connect=True)
-
-if UPDATE_DB_SCHEMA:
-    syncer = CassandraSyncer(session=connection.get_session())
-    syncer.sync(models=models)
 
 class CRUDOps:
     @staticmethod
@@ -190,22 +168,22 @@ class CRUDOps:
         ]
 
     @staticmethod
-    def get_users_with_username_like(org_identifier: str, q: str, limit: int = 25, offset: int = 0) -> list[UserInDBSchema]:
+    def get_users_with_username_starts_with(org_identifier: str, q: str, limit: int = 25, offset: int = 0) -> list[UserInDBSchema]:
         return [
             UserInDBSchema.model_validate(user)
             for user in UserByUsername
                 .filter(org_identifier=org_identifier)
-                .filter(username__like=f"%{q}%")
+                .filter(username__gte=q, username__lt=chr(ord(q[0]) + 1))
                 .limit(limit + offset)[offset:]
         ]
     
     @staticmethod
-    def get_users_with_email_like(org_identifier: str, q: str, limit: int = 25, offset: int = 0) -> list[UserInDBSchema]:
+    def get_users_with_email_starts_with(org_identifier: str, q: str, limit: int = 25, offset: int = 0) -> list[UserInDBSchema]:
         return [
             UserInDBSchema.model_validate(user)
             for user in UserByEmail
                 .filter(org_identifier=org_identifier)
-                .filter(email__like=f"%{q}%")
+                .filter(email__gte=q, email__lt=chr(ord(q[0]) + 1))
                 .limit(limit + offset)[offset:]
         ]
     

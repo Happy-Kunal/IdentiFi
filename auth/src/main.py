@@ -6,12 +6,13 @@ from fastapi.staticfiles import StaticFiles
 
 from src.api_crud import router as api_crud_router
 from src.config import cfg
+from src.lifespan import lifespan
 from src.oidc import router as oidc_router
 from src.schemas import UserOutputSchema, ServiceProviderOutputSchema
 from src.security import get_current_user
 from src.security import router as security_router
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,16 +1,23 @@
 # https://docs.pydantic.dev/latest/concepts/pydantic_settings/
 
 from __future__ import annotations
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic import HttpUrl, PositiveInt, AnyUrl, Json
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import FilePath
 
 
 
+class AstraCassandra(BaseModel):
+    keyspace: str
+    client_id: str
+    client_secret: str
+    secure_connection_bundle: FilePath = Field(default=Path("/etc/secure-connect-identifi.zip"))
 
-class Cassandra(BaseModel):
+class NonAstraCassandra(BaseModel):
     hosts: list[str]
     keyspace: str
     protocol_version: PositiveInt = 3
@@ -28,14 +35,11 @@ class CORS(BaseModel):
     allow_credentials: bool = False
 
 
-
-class DBSchemas(BaseModel):
-    update: bool = False
-
-
 class DB(BaseModel):
-    cassandra: Cassandra
-    schemas: DBSchemas
+    # line given below will try to build object of AstraCassandra
+    # if that is not possible than it will proceed with
+    # NonAstraCassandra
+    cassandra: AstraCassandra | NonAstraCassandra
 
 
 class Kafka(BaseModel):

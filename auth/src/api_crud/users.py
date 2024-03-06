@@ -38,7 +38,7 @@ async def get_users_in_admins_org(
     )
 
 @router.get("/{org_identifier}/users/search", response_model=list[UserOutputSchema])
-async def search_principal_user_in_admins_org_by_email(
+async def search_principal_user_in_admins_org(
     admin: AdminType,
     org_identifier: str,
     by: Literal["email", "username"],
@@ -50,14 +50,14 @@ async def search_principal_user_in_admins_org_by_email(
         raise DoesNotBelongsToException(org_identifier)
     
     if (by == "email"):
-        return CRUDOps.get_users_with_email_like(
+        return CRUDOps.get_users_with_email_starts_with(
             org_identifier=admin.org_identifier,
             q=q,
             limit=limit,
             offset=offset
         )
     else:
-        return CRUDOps.get_users_with_username_like(
+        return CRUDOps.get_users_with_username_starts_with(
             org_identifier=admin.org_identifier,
             q=q,
             limit=limit,

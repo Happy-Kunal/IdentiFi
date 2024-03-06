@@ -4,3 +4,11 @@ from .users import UserByUserID, AdminUserByUserID, WorkerUserByUserID
 from .users import UserByUsername, AdminUserByUsername, WorkerUserByUsername
 from .users import UserDraft, AdminUserDraft, WorkerUserDraft
 
+models_to_be_synced = [
+    ServiceProviderByClientID,
+    ServiceProviderByUsername,
+    UserByEmail,
+    UserByUserID,
+    UserByUsername,
+    UserDraft,
+]
