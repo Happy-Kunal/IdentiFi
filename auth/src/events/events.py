@@ -17,7 +17,7 @@ class KafkaEvent(BaseModel):
 class KafkaEventFactory(ABC):
     def __init__(self, topic: str, key_serializer: Serializer, value_serilizer: Serializer):
         self.topic = topic
-        self.key_serilizer = key_serializer
+        self.key_serializer = key_serializer
         self.value_serilizer = value_serilizer
 
     @abstractmethod
@@ -27,7 +27,7 @@ class KafkaEventFactory(ABC):
 
 
 
-class UserDraftKafkaEventFactory(KafkaEventFactory):
+class DraftUserKafkaEventFactory(KafkaEventFactory):
     def __init__(self, topic: str, key_serializer: Serializer, value_serilizer: Serializer):
         super().__init__(topic, key_serializer, value_serilizer)
     

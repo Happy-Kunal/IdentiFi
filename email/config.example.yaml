@@ -1,0 +1,14 @@
+events:
+  kafka:
+    consumer:
+      config:
+        bootstrap.servers: <bootstrap.servers>
+        group.id: identifi-email-service-group
+        auto.offset.reset: earliest
+        enable.auto.commit: false
+        partition.assignment.strategy: cooperative-sticky
+        client.id: identifi-email-service
+    schema_registry:
+      config:
+        url: <url>
+        basic.auth.user.info: <auth-info>
