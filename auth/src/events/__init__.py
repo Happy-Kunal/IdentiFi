@@ -8,7 +8,7 @@ from src.config import cfg
 from src.schemas import UserInDBSchema
 
 from .events import KafkaEvent
-from .events import UserDraftKafkaEventFactory as __UserDraftKafkaEventFactory
+from .events import DraftUserKafkaEventFactory as __UserDraftKafkaEventFactory
 from .producer import KafkaProducer as __KafkaProducer
 
 
