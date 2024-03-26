@@ -20,6 +20,8 @@ cookies:
 
 # create db keyspace and tables before running any service using db
 db:
+  max_hibernation_prevention_wait: 86400
+  max_hibernation_prevention_wait_deviation: 10
   cassandra:
     keyspace: "<some_keyspace_name>"
 
@@ -46,6 +48,10 @@ kafka:
       sasl.mechanisms: "<value-3>"
       sasl.username: "<value-4>"
       sasl.password: "<value-5>"
+
+    flush_timeout: 10.0
+    poll_interval: 10.0
+    poll_timeout: 1.0
 
   schema_registry:
     config:

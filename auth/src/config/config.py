@@ -43,6 +43,9 @@ class DB(BaseModel):
     # if that is not possible than it will proceed with
     # NonAstraCassandra
     cassandra: AstraCassandra | NonAstraCassandra
+    max_hibernation_prevention_wait: float | None = None
+    max_hibernation_prevention_wait_deviation: int = 10
+
 
 
 class Kafka(BaseModel):
@@ -53,6 +56,9 @@ class Kafka(BaseModel):
 
 class KafkaProduce(BaseModel):
     config: dict[str, Any]
+    flush_timeout: float = 10.0
+    poll_interval: float = 10.0
+    poll_timeout: float = 1.0
 
 
 class KafkaSchemaRegistry(BaseModel):

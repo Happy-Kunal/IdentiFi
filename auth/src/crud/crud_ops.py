@@ -1,22 +1,88 @@
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
 
+from cassandra.auth import PlainTextAuthProvider
+from cassandra.cluster import Cluster, Session
+from cassandra.cqlengine import connection, models
 from cassandra.cqlengine.query import BatchQuery
-from cassandra.cqlengine import connection
+from cassandra.io.libevreactor import LibevConnection
+from cassandra.policies import ExponentialReconnectionPolicy
 
-from src.config import cfg
-from src.schemas import UserInDBSchema, UserInputSchema, ServiceProviderInDBSchema, ServiceProviderInputSchema
+from src.commons import get_password_hash, make_secret
+from src.config import AstraCassandra, cfg
+from src.schemas import (ServiceProviderInDBSchema, ServiceProviderInputSchema,
+                         UserInDBSchema, UserInputSchema)
 from src.types import UserType
 from src.types.scopes import OIDCScopes
 
-from src.commons import get_password_hash, make_secret
-
+from .exceptions import (DatabaseConnectionAlreadyExists,
+                         NoDatabaseConnectionExists)
 from .models import ServiceProviderByClientID, ServiceProviderByUsername
-from .models.users import UserByUsername, UserByEmail, UserByUserID, UserDraft, AdminUserByEmail, WorkerUserByEmail, AdminUserByUsername, WorkerUserByUsername, AdminUserByUserID, WorkerUserByUserID, AdminUserDraft, WorkerUserDraft
+from .models.users import (AdminUserByEmail, AdminUserByUserID,
+                           AdminUserByUsername, AdminUserDraft, UserByEmail,
+                           UserByUserID, UserByUsername, UserDraft,
+                           WorkerUserByEmail, WorkerUserByUserID,
+                           WorkerUserByUsername, WorkerUserDraft)
 
 
 class CRUDOps:
-    @staticmethod
-    def get_user_by_username(org_identifier: str, username: str) -> UserInDBSchema:
+    __cluster: Cluster | None = None
+    __session: Session | None = None
+    __default_connection_name: str = "identifi_auth_connection"
+
+    @classmethod
+    def connect(cls):
+        """
+        make connection to database
+        """
+        if (cls.__cluster is not None or cls.__session is not None):
+            raise DatabaseConnectionAlreadyExists
+        elif isinstance(cfg.db.cassandra, AstraCassandra):
+            cloud_config = {"secure_connect_bundle": str(cfg.db.cassandra.secure_connection_bundle.absolute())}
+
+            cls.__cluster = Cluster(
+                auth_provider=PlainTextAuthProvider(
+                    cfg.db.cassandra.client_id, cfg.db.cassandra.client_secret
+                ),
+                cloud=cloud_config,
+                connection_class=LibevConnection,
+                reconnection_policy=ExponentialReconnectionPolicy(base_delay=0.5, max_delay=10)
+            )
+        else:
+            cls.__cluster = Cluster(
+                cfg.db.cassandra.hosts,
+                protocol_version=cfg.db.cassandra.protocol_version,
+                connection_class=LibevConnection,
+                reconnection_policy=ExponentialReconnectionPolicy(base_delay=0.5, max_delay=60)
+            )
+
+        cls.__session = cls.__cluster.connect(keyspace=cfg.db.cassandra.keyspace)
+
+        connection.register_connection(name=cls.__default_connection_name, session=cls.__session, default=True)
+        models.DEFAULT_KEYSPACE = cfg.db.cassandra.keyspace
+
+    @classmethod
+    def ping_db(cls) -> bool:
+        """
+        executes a simple select query on database once returns `True` if query succeed else `False`
+        """
+        row = cls.__session.execute("select release_version from system.local").one()
+        return bool(row)
+
+    
+    @classmethod
+    def disconnect(cls):
+        if (cls.__cluster is None or cls.__session is None):
+            raise NoDatabaseConnectionExists
+        
+        connection.unregister_connection(cls.__default_connection_name)
+        cls.__session.shutdown()
+        cls.__cluster.shutdown()
+
+
+
+
+    @classmethod
+    def get_user_by_username(cls, org_identifier: str, username: str) -> UserInDBSchema:
         return UserInDBSchema.model_validate(
             UserByUsername.filter(
                 org_identifier=org_identifier,
@@ -24,20 +90,20 @@ class CRUDOps:
             ).get()
         )
     
-    @staticmethod
-    def get_service_provider_by_username(username: str) -> ServiceProviderInDBSchema:
+    @classmethod
+    def get_service_provider_by_username(cls, username: str) -> ServiceProviderInDBSchema:
         return ServiceProviderInDBSchema.model_validate(
             ServiceProviderByUsername.filter(username=username).first()
         )
     
-    @staticmethod
-    def get_service_provider_by_client_id(client_id: UUID) -> ServiceProviderInDBSchema:
+    @classmethod
+    def get_service_provider_by_client_id(cls, client_id: UUID) -> ServiceProviderInDBSchema:
         return ServiceProviderInDBSchema.model_validate(
             ServiceProviderByClientID.filter(client_id=client_id).first()
         )
     
-    @staticmethod
-    def get_user_by_user_id(org_identifier: str, user_id: UUID) -> UserInDBSchema:
+    @classmethod
+    def get_user_by_user_id(cls, org_identifier: str, user_id: UUID) -> UserInDBSchema:
         return UserInDBSchema.model_validate(
             UserByUserID.filter(
                 org_identifier=org_identifier,
@@ -45,13 +111,13 @@ class CRUDOps:
             ).get()
         )
     
-    @staticmethod
-    def get_scopes_granted_by_user_to_client(org_identifier: str, user_id: UUID, client_id: UUID) -> set[OIDCScopes]:
+    @classmethod
+    def get_scopes_granted_by_user_to_client(cls, org_identifier: str, user_id: UUID, client_id: UUID) -> set[OIDCScopes]:
         # TODO: implement in future
         return set(OIDCScopes.__members__.values())
     
-    @staticmethod
-    def create_user(user: UserInputSchema) -> UserInDBSchema:
+    @classmethod
+    def create_user(cls, user: UserInputSchema) -> UserInDBSchema:
         user_in_db = UserInDBSchema(
             org_identifier=user.org_identifier,
             username=user.username,
@@ -76,8 +142,8 @@ class CRUDOps:
         
         return user_in_db
     
-    @staticmethod
-    def create_service_provider(service_provider: ServiceProviderInputSchema) -> ServiceProviderInDBSchema:
+    @classmethod
+    def create_service_provider(cls, service_provider: ServiceProviderInputSchema) -> ServiceProviderInDBSchema:
         # TODO: convert to lwt transaction
         service_provider_in_db = ServiceProviderInDBSchema(
             username=service_provider.username,
@@ -94,8 +160,8 @@ class CRUDOps:
 
         return service_provider_in_db
     
-    @staticmethod
-    def delete_user(org_identifier: str, user_id: UUID) -> UserInDBSchema:
+    @classmethod
+    def delete_user(cls, org_identifier: str, user_id: UUID) -> UserInDBSchema:
         user = CRUDOps.get_user_by_user_id(org_identifier=org_identifier, user_id=user_id)
 
         with BatchQuery() as b:
@@ -105,8 +171,8 @@ class CRUDOps:
         
         return user
     
-    @staticmethod
-    def delete_service_provider(username: str) -> ServiceProviderInDBSchema:
+    @classmethod
+    def delete_service_provider(cls, username: str) -> ServiceProviderInDBSchema:
         service_provider = CRUDOps.get_service_provider_by_username(username=username)
 
         with BatchQuery() as b:
@@ -117,8 +183,8 @@ class CRUDOps:
     
     
     
-    @staticmethod
-    def reset_service_provider_secret(username: str) -> ServiceProviderInDBSchema:
+    @classmethod
+    def reset_service_provider_secret(cls, username: str) -> ServiceProviderInDBSchema:
         service_provider = CRUDOps.get_service_provider_by_username(username=username)
 
         new_secret = make_secret()
@@ -131,8 +197,8 @@ class CRUDOps:
         return service_provider
     
     
-    @staticmethod
-    def create_user_draft(draft_user: UserInputSchema) -> UserInDBSchema:
+    @classmethod
+    def create_user_draft(cls, draft_user: UserInputSchema) -> UserInDBSchema:
         draft_user_in_db = UserInDBSchema(
             org_identifier=draft_user.org_identifier,
             username=draft_user.username,
@@ -150,8 +216,8 @@ class CRUDOps:
         
         return draft_user_in_db
     
-    @staticmethod
-    def get_all_users_by_org_identifier(org_identifier: str, limit: int = 1000, offset: int = 0) -> list[UserInDBSchema]:
+    @classmethod
+    def get_all_users_by_org_identifier(cls, org_identifier: str, limit: int = 1000, offset: int = 0) -> list[UserInDBSchema]:
         """
         since cassandra doesn't support offset natively.
         **this query is costly**. so it is RECOMMENDED to
@@ -167,8 +233,8 @@ class CRUDOps:
                 .limit(offset + limit)[offset:]
         ]
 
-    @staticmethod
-    def get_users_with_username_starts_with(org_identifier: str, q: str, limit: int = 25, offset: int = 0) -> list[UserInDBSchema]:
+    @classmethod
+    def get_users_with_username_starts_with(cls, org_identifier: str, q: str, limit: int = 25, offset: int = 0) -> list[UserInDBSchema]:
         return [
             UserInDBSchema.model_validate(user)
             for user in UserByUsername
@@ -177,8 +243,8 @@ class CRUDOps:
                 .limit(limit + offset)[offset:]
         ]
     
-    @staticmethod
-    def get_users_with_email_starts_with(org_identifier: str, q: str, limit: int = 25, offset: int = 0) -> list[UserInDBSchema]:
+    @classmethod
+    def get_users_with_email_starts_with(cls, org_identifier: str, q: str, limit: int = 25, offset: int = 0) -> list[UserInDBSchema]:
         return [
             UserInDBSchema.model_validate(user)
             for user in UserByEmail
@@ -188,8 +254,8 @@ class CRUDOps:
         ]
     
     
-    @staticmethod
-    def promote_user_to_admin(org_identifier: str, user_id: UUID) -> UserInDBSchema:
+    @classmethod
+    def promote_user_to_admin(cls, org_identifier: str, user_id: UUID) -> UserInDBSchema:
         user = CRUDOps.get_user_by_user_id(org_identifier=org_identifier, user_id=user_id)
 
         with BatchQuery() as b:
@@ -201,8 +267,8 @@ class CRUDOps:
         return user
         
     
-    @staticmethod
-    def demote_user_to_worker(org_identifier: str, user_id: UUID) -> UserInDBSchema:
+    @classmethod
+    def demote_user_to_worker(cls, org_identifier: str, user_id: UUID) -> UserInDBSchema:
         user = CRUDOps.get_user_by_user_id(org_identifier=org_identifier, user_id=user_id)
 
         with BatchQuery() as b:

@@ -10,6 +10,8 @@ class ProducerInterface(Protocol):
         ...
     def __len__(self) -> int:
         ...
+    def poll(self, timeout: float) -> int:
+        ...
     
 
 class KafkaProducer:
@@ -27,6 +29,9 @@ class KafkaProducer:
             key=event.key,
             value=event.value
         )
+
+    def poll(self, timeout: float) -> int:
+        return self.producer.poll(timeout)
 
     def flush(self, timeout: float = 10.0):
         self.producer.flush(timeout)
