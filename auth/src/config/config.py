@@ -1,21 +1,25 @@
 # https://docs.pydantic.dev/latest/concepts/pydantic_settings/
 
 from __future__ import annotations
+
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, Type
 
-from pydantic import BaseModel, Field
-from pydantic import HttpUrl, PositiveInt, AnyUrl, Json
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import FilePath
-
+from pydantic import AnyUrl, BaseModel, Field, FilePath, HttpUrl, PositiveInt
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    YamlConfigSettingsSource
+)
 
 
 class AstraCassandra(BaseModel):
     keyspace: str
     client_id: str
     client_secret: str
-    secure_connection_bundle: FilePath = Field(default=Path("/etc/secure-connect-identifi.zip"))
+    secure_connection_bundle: FilePath = Field(default=Path("./secure-connect-identifi.zip"))
+
 
 class NonAstraCassandra(BaseModel):
     hosts: list[str]
@@ -26,7 +30,6 @@ class NonAstraCassandra(BaseModel):
 class Cookies(BaseModel):
     https_only: bool = True
     domain: str | None = None
-
 
 
 class CORS(BaseModel):
@@ -44,8 +47,16 @@ class DB(BaseModel):
 
 class Kafka(BaseModel):
     topics: Topics
-    producer_config: Json
-    schema_registry_config: Json
+    producer: KafkaProduce
+    schema_registry: KafkaSchemaRegistry
+
+
+class KafkaProduce(BaseModel):
+    config: dict[str, Any]
+
+
+class KafkaSchemaRegistry(BaseModel):
+    config: dict[str, Any]
 
 
 class SameSiteExpTime(BaseModel):
@@ -109,11 +120,11 @@ class SameSite(BaseModel):
 
 
 class Config(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding='utf-8', env_nested_delimiter="__")
+    model_config = SettingsConfigDict(yaml_file="auth-config.yaml")
 
 
     cookies: Cookies
-    cors: CORS = Field(alias="backend_cors")
+    cors: CORS
     db: DB
     kafka: Kafka
     oidc: OIDC
@@ -122,4 +133,24 @@ class Config(BaseSettings):
     issuer: HttpUrl
     login_endpoint: str = "/login"
     client_secret_size: PositiveInt = Field(32, alias="max_secret_size_in_bytes") # (in bytes)
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            YamlConfigSettingsSource(settings_cls),
+            *super().settings_customise_sources(
+                settings_cls=settings_cls,
+                init_settings=init_settings,
+                env_settings=env_settings,
+                dotenv_settings=dotenv_settings,
+                file_secret_settings=file_secret_settings
+            )
+        )
     

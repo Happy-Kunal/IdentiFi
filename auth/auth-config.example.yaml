@@ -1,0 +1,105 @@
+---
+# if origin in `origins` or fully matches `origins_regex` or both
+# CORS will be allowed.
+cors:
+  origins:
+  - http://localhost
+
+  origins_regex: http[s]{0,1}://[\w\.]*localhost\.localdomain
+  allow_credentials: true
+
+
+# https://stackoverflow.com/questions/1062963/how-do-browser-cookie-domains-work
+# https://stackoverflow.com/questions/1134290/cookies-on-localhost-with-explicit-domain
+# https://datacadamia.com/web/http/cookie_domain
+cookies:
+  # use https only cookies for prod
+  https_only: true
+  domain: ".localhost.localdomain"
+
+
+# create db keyspace and tables before running any service using db
+db:
+  cassandra:
+    keyspace: "<some_keyspace_name>"
+
+    ## use any one of following sections that starts with DB
+    ## section1 (for connecting with cassandra hosted on astraDB)
+    client_id: "<client_id>"
+    client_secret: "<client_secret>"
+    secure_connection_bundle: ./secure-connect-identifi.zip
+    
+    ## section 2 (for connecting with cassandra hosted elsewhere)
+    # hosts:
+    # - "<host1>"
+    # - "<host2>"
+    # - "..."
+    # 
+    # protocol_version: 3
+
+
+kafka:
+  producer:
+    config:
+      bootstrap.servers: "<value-1>"
+      security.protocol: "<value-2>"
+      sasl.mechanisms: "<value-3>"
+      sasl.username: "<value-4>"
+      sasl.password: "<value-5>"
+
+  schema_registry:
+    config:
+      url: "<value-1>"
+      basic.auth.user.info: "<value-2>"
+
+  topics:
+    draft_user: "<corresponding_topic_name>"
+
+
+oidc:
+  exp_time:
+    access_token: 1800
+    authcode: 120
+    id_token: 120
+    refresh_token: 86400
+
+  jwe:
+    algorithms:
+      key_management: dir                          # https://python-jose.readthedocs.io/en/latest/jwe/index.html#supported-key-management-algorithms
+      encryption: A256GCM                          # https://python-jose.readthedocs.io/en/latest/jwe/index.html#supported-content-encryption-algorithms
+    secret_key: "<JWE_SECRET_KEY><JWE_SECRET_KEY>" # 256 bits (32 chars)
+
+  jwt:
+    signing_algorithm: RS256                       # https://python-jose.readthedocs.io/en/latest/jws/index.html#supported-algorithms
+    keys:
+      private_key: |-                              # openssl genpkey -algorithm RSA -out private_key.pem; cat private_key.pem
+        -----BEGIN PRIVATE KEY-----
+        <PRIVATE_KEY>
+        -----END PRIVATE KEY-----
+      public_key: |-                               # openssl rsa -pubout -in private_key.pem -out public_key.pem; cat public_key.pem
+        -----BEGIN PUBLIC KEY-----
+        <PUBLIC_KEY>
+        -----END PUBLIC KEY-----
+
+
+same_site:
+  exp_time:
+    access_token: 1800
+    refresh_token: 86400
+  
+  jwt:
+    signing_algorithm: RS256                       # https://python-jose.readthedocs.io/en/latest/jws/index.html#supported-algorithms
+    keys:
+      private_key: |-                              # openssl genpkey -algorithm RSA -out private_key.pem; cat private_key.pem
+        -----BEGIN PRIVATE KEY-----
+        <PRIVATE_KEY>
+        -----END PRIVATE KEY-----
+      public_key: |-                               # openssl rsa -pubout -in private_key.pem -out public_key.pem; cat public_key.pem
+        -----BEGIN PUBLIC KEY-----
+        <PUBLIC_KEY>
+        -----END PUBLIC KEY-----
+
+
+issuer: http://api.localhost.localdomain/
+login_endpoint: http://api.localhost.localdomain/login
+max_secret_size_in_bytes: 32

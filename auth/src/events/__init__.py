@@ -18,8 +18,8 @@ __all__ = [
     "UserDraftKafkaEventFactory"
 ]
 
-schema_registry = SchemaRegistryClient(cfg.kafka.schema_registry_config)
-producer = Producer(cfg.kafka.producer_config)
+schema_registry = SchemaRegistryClient(cfg.kafka.schema_registry.config)
+producer = Producer(cfg.kafka.producer.config)
 
 KafkaProducer = __KafkaProducer(producer=producer)
 

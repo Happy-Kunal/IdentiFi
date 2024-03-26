@@ -3,3 +3,5 @@ __pycache__/
 *.zip
 *token*.json
 .dev.txt
+*.yaml
+!*.example.yaml
