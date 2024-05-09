@@ -18,6 +18,9 @@ from fastapi import Request
 from fastapi import status, HTTPException
 
 
+# TODO: read RFC and find whether it is better to stop user from passing values for
+# the fields that aren't validate according to `src.schemas.users.UserInputSchema`
+# at the level of this class or later in api endpoints
 class OAuth2PasswordOrRefreshTokenRequestParams:
     """
     This is a dependency class to collect the `username` and `password` as form data

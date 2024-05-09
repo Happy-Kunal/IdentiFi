@@ -28,7 +28,7 @@ UserDraftKafkaEventFactory = __UserDraftKafkaEventFactory(
 
     key_serializer=StringSerializer(),
 
-    value_serilizer=AvroSerializer(
+    value_serializer=AvroSerializer(
         schema_registry,
         PydanticToAvroSchemaMaker(UserInDBSchema).get_schema_str(),
         lambda user, _ctx: user.model_dump()
